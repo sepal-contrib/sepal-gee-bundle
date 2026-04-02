@@ -1,9 +1,16 @@
+import logging
+
 import solara
+from pysepal.logger import setup_logging
 from pysepal.mapping import SepalMap
 from pysepal.sepalwidgets.vue_app import MapApp, ThemeToggle
 from pysepal.solara import get_current_gee_interface, setup_theme_colors, with_sepal_sessions
 
 from .model import CoverageState
+
+logger = setup_logging(logger_name="sepal_gee_bundle.coverage_analysis")
+logger.setLevel(logging.DEBUG)
+logger.debug("Coverage Analysis app initialized")
 
 
 @solara.component
@@ -14,9 +21,12 @@ def CoverageAnalysisPage():
     theme_toggle = ThemeToggle()
     gee_interface = get_current_gee_interface()
 
-    state = solara.use_memo(lambda: CoverageState(), [])
+    state = solara.use_memo(lambda: CoverageState(), [])  # noqa: F841
     sepal_map = solara.use_memo(
-        lambda: SepalMap(gee_interface=gee_interface), [id(gee_interface)]
+        lambda: SepalMap(
+            gee_interface=gee_interface, fullscreen=True, theme_toggle=theme_toggle
+        ),
+        [id(gee_interface)],
     )
 
     steps_data = []

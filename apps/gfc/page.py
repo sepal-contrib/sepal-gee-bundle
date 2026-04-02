@@ -1,9 +1,19 @@
+"""GFC — Global Forest Change visualization and export."""
+
+import logging
+
 import solara
+from pysepal.logger import setup_logging
 from pysepal.mapping import SepalMap
 from pysepal.sepalwidgets.vue_app import MapApp, ThemeToggle
 from pysepal.solara import get_current_gee_interface, setup_theme_colors, with_sepal_sessions
 
+from .components import AoiStep, ParamsStep, ResultsStep
 from .model import GfcState
+
+logger = setup_logging(logger_name="sepal_gee_bundle.gfc")
+logger.setLevel(logging.DEBUG)
+logger.debug("GFC app initialized")
 
 
 @solara.component
@@ -16,7 +26,10 @@ def GfcPage():
 
     state = solara.use_memo(lambda: GfcState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(gee_interface=gee_interface), [id(gee_interface)]
+        lambda: SepalMap(
+            gee_interface=gee_interface, fullscreen=True, theme_toggle=theme_toggle
+        ),
+        [id(gee_interface)],
     )
 
     steps_data = []
@@ -31,17 +44,17 @@ def GfcPage():
         {
             "title": "Area of Interest",
             "icon": "mdi-map-marker-check",
-            "content": [solara.Text("AOI selection")],
+            "content": [AoiStep(state, sepal_map)],
         },
         {
-            "title": "Forest Mask",
-            "icon": "mdi-tree",
-            "content": [solara.Text("Forest mask configuration")],
+            "title": "Parameters",
+            "icon": "mdi-tune",
+            "content": [ParamsStep(state, sepal_map, gee_interface)],
         },
         {
-            "title": "Visualize & Export",
-            "icon": "mdi-eye",
-            "content": [solara.Text("Visualization and export")],
+            "title": "Results & Export",
+            "icon": "mdi-chart-bar",
+            "content": [ResultsStep(state, sepal_map, gee_interface)],
         },
     ]
 

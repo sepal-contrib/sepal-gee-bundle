@@ -22,13 +22,15 @@ def on_kernel_start():
     return setup_sessions()
 
 
+@solara.component
+def NoNavLayout(children=[]):
+    """Render children directly — no navigation bar, no tabs."""
+    solara.Column(children=children, style={"padding": "0", "margin": "0"})
+
+
 routes = [
-    solara.Route(path="fcdm", component=FcdmPage, label="FCDM"),
-    solara.Route(path="basin-rivers", component=BasinRiversPage, label="Basin Rivers"),
-    solara.Route(path="gfc", component=GfcPage, label="GFC"),
-    solara.Route(
-        path="coverage-analysis",
-        component=CoverageAnalysisPage,
-        label="Coverage Analysis",
-    ),
+    solara.Route(path="fcdm", component=FcdmPage, layout=NoNavLayout),
+    solara.Route(path="basin-rivers", component=BasinRiversPage, layout=NoNavLayout),
+    solara.Route(path="gfc", component=GfcPage, layout=NoNavLayout),
+    solara.Route(path="coverage-analysis", component=CoverageAnalysisPage, layout=NoNavLayout),
 ]

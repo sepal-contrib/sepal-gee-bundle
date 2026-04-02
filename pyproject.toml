@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pysepal",
     "solara",
+    "starlette<1.0",
     "ee-client>=2.5.0",
 ]
 
@@ -20,7 +21,7 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
-    "black",
+    "pytest-mock",
     "ruff",
 ]
 
@@ -40,16 +41,15 @@ addopts = [
 pythonpath = ["."]
 
 [tool.ruff]
-ignore-init-module-imports = true
 fix = true
+line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "D", "RUF"]
 ignore = ["E501", "F403", "D107", "D100", "D101", "D102", "D103", "D104"]
 
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
-
-[tool.black]
-line-length = 100
