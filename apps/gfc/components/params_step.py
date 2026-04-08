@@ -1,58 +1,95 @@
 """Parameter configuration and visualization step for GFC app."""
 
-import asyncio
 import logging
+from dataclasses import asdict, dataclass
 
 import reacton.ipyvuetify as rv
 import solara
+from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 
-from apps.gfc.params import GFC_MAX_YEAR, GFC_MIN_YEAR, SLD_INTERVALS
+from apps.gfc.params import GFC_LEGEND, GFC_MAX_YEAR, GFC_MIN_YEAR, SLD_INTERVALS
 from apps.gfc.scripts import classify_gfc
 
 logger = logging.getLogger("sepal_gee_bundle.gfc")
 
+GFC_LAYER_KEY = "gfc_classification"
+
+
+@dataclass(frozen=True, slots=True)
+class VisualizeRequest:
+    aoi_fc: object  # ee.FeatureCollection
+    treecover: int
+    year_start: int
+    year_end: int
+
 
 @solara.component
-def ParamsStep(state, sepal_map, gee_interface):
+def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=None):
     """Tree cover threshold, year range, and visualization controls."""
-    error, set_error = solara.use_state("")
-    viz_trigger = solara.use_reactive(0)
+    cancel_reason = solara.use_ref(None)
 
-    @solara.lab.use_task(
-        dependencies=[viz_trigger.value], raise_error=False, prefer_threaded=True
+    @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
+    async def viz_task(request: VisualizeRequest):
+        gfc_image = classify_gfc(
+            request.aoi_fc,
+            request.treecover,
+            request.year_start,
+            request.year_end,
+        )
+
+        # Remove any previous GFC layer before adding the new one
+        sepal_map.remove_layer(GFC_LAYER_KEY, none_ok=True)
+
+        await sepal_map.add_ee_layer_async(
+            gfc_image.sldStyle(SLD_INTERVALS),
+            {},
+            GFC_LAYER_KEY,
+            autocenter=True,
+        )
+
+        logger.info("GFC visualization loaded: %s", GFC_LAYER_KEY)
+        return gfc_image
+
+    def _sync_viz():
+        state.loading.value = viz_task.pending
+        if viz_task.pending or viz_task.cancelled:
+            return
+        if viz_task.error:
+            state.error_message.value = str(viz_task.exception)
+            return
+        if viz_task.finished and viz_task.value is not None:
+            state.error_message.value = None
+            state.result_image.value = viz_task.value
+            if legend_data is not None:
+                legend_data.set(asdict(GFC_LEGEND))
+            if legend_visible is not None:
+                legend_visible.set(True)
+
+    solara.use_effect(
+        _sync_viz,
+        [viz_task.pending, viz_task.cancelled, viz_task.finished, viz_task.error],
     )
-    async def viz_task():
-        if viz_trigger.value == 0:
+
+    def _start_viz():
+        if state.aoi.value is None:
+            state.error_message.value = "Please select an Area of Interest first."
             return
-        set_error("")
-        aoi = state.aoi.value
-        if aoi is None:
-            set_error("Please select an Area of Interest first.")
-            return
-
-        gfc_image = await asyncio.to_thread(
-            classify_gfc,
-            aoi.feature_collection,
-            state.treecover.value,
-            state.year_start.value,
-            state.year_end.value,
-        )
-
-        state.result_image.set(gfc_image)
-
-        layer_name = (
-            f"gfc_{state.treecover.value}_{state.year_start.value}_{state.year_end.value}"
-        )
-
-        if not sepal_map.find_layer(layer_name, none_ok=True):
-            await sepal_map.add_ee_layer_async(
-                gfc_image.sldStyle(SLD_INTERVALS),
-                {},
-                layer_name,
-                autocenter=True,
+        cancel_reason.current = None
+        state.loading.value = True
+        state.error_message.value = None
+        state.result_image.value = None
+        if legend_visible is not None:
+            legend_visible.set(False)
+        viz_task(
+            VisualizeRequest(
+                aoi_fc=state.aoi.value.feature_collection,
+                treecover=state.treecover.value,
+                year_start=state.year_start.value,
+                year_end=state.year_end.value,
             )
+        )
 
-        logger.info("GFC visualization loaded: %s", layer_name)
+    btn_props = use_task_button(viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason)
 
     year_items = [
         {"text": str(2000 + i), "value": 2000 + i} for i in range(GFC_MIN_YEAR, GFC_MAX_YEAR + 1)
@@ -87,17 +124,14 @@ def ParamsStep(state, sepal_map, gee_interface):
             outlined=True,
         )
 
-        if viz_task.error:
-            rv.Alert(type="error", text=True, children=[str(viz_task.error)])
+        if state.error_message.value:
+            rv.Alert(type="error", text=True, children=[state.error_message.value])
 
-        if error:
-            rv.Alert(type="error", text=True, children=[error])
-
-        solara.Button(
-            "Visualize",
-            icon_name="mdi-eye",
-            on_click=lambda *_: viz_trigger.set(viz_trigger.value + 1),
-            loading=viz_task.pending,
-            disabled=viz_task.pending or state.aoi.value is None,
-            color="primary",
+        TaskButtonComponent(
+            label="Add layer",
+            **btn_props,
+            icon="mdi-plus",
+            external_busy=state.aoi.value is None,
+            small=True,
+            block=True,
         )
