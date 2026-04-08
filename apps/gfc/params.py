@@ -2,6 +2,7 @@
 
 import numpy as np
 from matplotlib import colors as mcolors
+from pysepal.solara.components.legend import DiscreteEntry, GradientEntry, LegendData
 
 # --- Dataset ---
 GFC_DATASET = "UMD/hansen/global_forest_change_2024_v1_12"
@@ -67,3 +68,20 @@ def _build_sld() -> str:
 
 
 SLD_INTERVALS = _build_sld()
+
+# --- Legend data for LegendComponent ---
+GFC_LEGEND = LegendData(
+    gradients=[
+        GradientEntry(
+            colors=[HEX_PALETTE[0], HEX_PALETTE[GFC_MAX_YEAR - 1]],
+            labels=[str(2000 + 1), str(2000 + GFC_MAX_YEAR)],
+            title="Forest loss year",
+        ),
+    ],
+    items=[
+        DiscreteEntry("Non forest", HEX_PALETTE[GFC_MAX_YEAR]),
+        DiscreteEntry("Forest", HEX_PALETTE[GFC_MAX_YEAR + 1]),
+        DiscreteEntry("Gains", HEX_PALETTE[GFC_MAX_YEAR + 2]),
+        DiscreteEntry("Gain + loss", HEX_PALETTE[GFC_MAX_YEAR + 3]),
+    ],
+)
