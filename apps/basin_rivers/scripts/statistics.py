@@ -107,3 +107,37 @@ def get_catchment_pie_df(df: pd.DataFrame, selected_var: str) -> pd.DataFrame:
     grouped = work.groupby("basin", as_index=False)["area"].sum()
     colors = work.drop_duplicates("basin")[["basin", "catch_color"]]
     return grouped.merge(colors, on="basin", how="left")
+
+
+def get_catchment_bar_df(
+    df: pd.DataFrame,
+    selected_var: str,
+    timespan: tuple[int, int],
+) -> tuple[pd.DataFrame, str]:
+    """Reshape zonal_df for the per-catchment bar chart.
+
+    Returns (dataframe, mode):
+      - mode="single": one row per basin with `area`. Used for "all" and any
+        single-class selection.
+      - mode="stacked": one row per (basin, year) with `area`. Used for "loss",
+        filtered to the given timespan.
+    """
+    if df.empty or selected_var not in _VAR_KEYS:
+        return pd.DataFrame(columns=["basin", "area", "catch_color"]), "single"
+
+    if selected_var == "loss":
+        from_, to = timespan
+        mask = (df["group"] == "loss") & df["year"].between(from_, to)
+        loss_df = df.loc[mask]
+        if loss_df.empty:
+            return pd.DataFrame(columns=["basin", "year", "area", "catch_color"]), "stacked"
+        grouped = loss_df.groupby(["basin", "year"], as_index=False)["area"].sum()
+        colors = loss_df.drop_duplicates("basin")[["basin", "catch_color"]]
+        return grouped.merge(colors, on="basin", how="left"), "stacked"
+
+    work = df if selected_var == "all" else df[df["group"] == selected_var]
+    if work.empty:
+        return pd.DataFrame(columns=["basin", "area", "catch_color"]), "single"
+    grouped = work.groupby("basin", as_index=False)["area"].sum()
+    colors = work.drop_duplicates("basin")[["basin", "catch_color"]]
+    return grouped.merge(colors, on="basin", how="left"), "single"

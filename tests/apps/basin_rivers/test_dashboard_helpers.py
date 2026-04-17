@@ -5,6 +5,7 @@ import pytest
 
 from apps.basin_rivers.scripts.statistics import (
     add_catchment_colors,
+    get_catchment_bar_df,
     get_catchment_pie_df,
     get_overall_pie_df,
 )
@@ -93,3 +94,30 @@ class TestGetCatchmentPieDf:
     def test_unknown_var_returns_empty(self, colored_df):
         out = get_catchment_pie_df(colored_df, selected_var="nope")
         assert out.empty
+
+
+class TestGetCatchmentBarDf:
+    @pytest.fixture
+    def colored_df(self, sample_df):
+        return add_catchment_colors(sample_df)
+
+    def test_all_mode_one_row_per_basin(self, colored_df):
+        out, mode = get_catchment_bar_df(colored_df, "all", (2001, 2020))
+        assert mode == "single"
+        assert set(out["basin"]) == {"1", "2", "3"}
+        assert list(out.columns) == ["basin", "area", "catch_color"]
+
+    def test_class_mode_filters(self, colored_df):
+        out, mode = get_catchment_bar_df(colored_df, "forest", (2001, 2020))
+        assert mode == "single"
+        assert set(out["basin"]) == {"1", "3"}
+
+    def test_loss_mode_year_by_basin(self, colored_df):
+        out, mode = get_catchment_bar_df(colored_df, "loss", (2001, 2020))
+        assert mode == "stacked"
+        assert set(out.columns) >= {"basin", "year", "area", "catch_color"}
+        assert (out["year"] >= 2001).all() and (out["year"] <= 2020).all()
+
+    def test_loss_mode_respects_timespan(self, colored_df):
+        out, mode = get_catchment_bar_df(colored_df, "loss", (2002, 2020))
+        assert out.empty or (out["year"] >= 2002).all()

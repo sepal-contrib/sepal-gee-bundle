@@ -2,6 +2,7 @@ from .gfc_classification import classify_gfc
 from .statistics import (
     add_catchment_colors,
     compute_zonal_stats,
+    get_catchment_bar_df,
     get_catchment_pie_df,
     get_overall_pie_df,
     parse_zonal_stats,
@@ -16,6 +17,7 @@ __all__ = [
     "compute_zonal_stats",
     "create_basins_layer",
     "create_selection_layer",
+    "get_catchment_bar_df",
     "get_catchment_pie_df",
     "get_hydroshed_collection",
     "get_overall_pie_df",
