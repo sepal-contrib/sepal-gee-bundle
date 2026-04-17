@@ -1,4 +1,11 @@
-"""Overall forest-change donut. Click a slice to set selected_var."""
+"""Overall forest-change donut.
+
+The selected slice (`state.selected_var`) is visually emphasized via ECharts'
+`selectedMode`. Variable selection itself is driven by the settings card
+dropdown. Click-to-select on the slice is a known-broken pattern with
+ipecharts-in-solara (reacton `Element.on()` ≠ ipywidget `.on()`) and is a
+follow-up.
+"""
 
 import solara
 from ipecharts import EChartsWidget
@@ -13,28 +20,11 @@ from .theme import use_echarts_theme
 @solara.component
 def OverallPie(state, theme_toggle):
     theme = use_echarts_theme(theme_toggle)
-    chart_ref = solara.use_ref(None)
 
     df = state.zonal_df.value
     selected = state.selected_var.value
-    empty = df is None or df.empty
 
-    def on_click(params):
-        group = (params or {}).get("data", {}).get("_group")
-        if not group:
-            return
-        state.selected_var.value = "all" if selected == group else group
-
-    def _attach_click():
-        widget = chart_ref.current
-        if widget is None or not hasattr(widget, "on"):
-            return None
-        widget.on("click", None, on_click)
-        return lambda: widget.off("click", on_click)
-
-    solara.use_effect(_attach_click, [id(chart_ref.current), selected])
-
-    if empty:
+    if df is None or df.empty:
         solara.Text("Run statistics to see the overall distribution.")
         return
 
@@ -44,7 +34,7 @@ def OverallPie(state, theme_toggle):
             "value": round(float(row["area"]), 2),
             "name": row["group"].replace("_", " ").title(),
             "itemStyle": {"color": row["color"]},
-            "_group": row["group"],
+            "selected": row["group"] == selected,
         }
         for _, row in pie_df.iterrows()
     ]
@@ -58,9 +48,10 @@ def OverallPie(state, theme_toggle):
                 radius=["50%", "70%"],
                 data=data,
                 label={"show": True, "formatter": "{b}: {d}%"},
+                selectedMode="single",
                 emphasis={"scale": True, "scaleSize": 10},
             )
         ],
     )
 
-    chart_ref.current = EChartsWidget.element(option=option, theme=theme, style={"height": "320px"})
+    EChartsWidget.element(option=option, theme=theme, style={"height": "320px"})
