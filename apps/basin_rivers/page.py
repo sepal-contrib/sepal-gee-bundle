@@ -1,3 +1,5 @@
+"""Basin Rivers — Upstream Watershed Delineation & Forest Change Stats."""
+
 import logging
 
 import solara
@@ -5,7 +7,9 @@ from pysepal.logger import setup_logging
 from pysepal.mapping import SepalMap
 from pysepal.sepalwidgets.vue_app import MapApp, ThemeToggle
 from pysepal.solara import get_current_gee_interface, setup_theme_colors, with_sepal_sessions
+from pysepal.solara.notifications import NotificationProvider
 
+from .components import DashboardStep, DelineationStep, ParamsStep, PointStep
 from .model import BasinRiversState
 
 logger = setup_logging(logger_name="sepal_gee_bundle.basin_rivers")
@@ -18,14 +22,13 @@ logger.debug("Basin Rivers app initialized")
 def BasinRiversPage():
     """Upstream watershed delineation and forest change statistics."""
     setup_theme_colors()
+    NotificationProvider()
     theme_toggle = ThemeToggle()
     gee_interface = get_current_gee_interface()
 
-    state = solara.use_memo(lambda: BasinRiversState(), [])  # noqa: F841
+    state = solara.use_memo(lambda: BasinRiversState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(
-            gee_interface=gee_interface, fullscreen=True, theme_toggle=theme_toggle
-        ),
+        lambda: SepalMap(gee_interface=gee_interface, fullscreen=True, theme_toggle=theme_toggle),
         [id(gee_interface)],
     )
 
@@ -41,17 +44,22 @@ def BasinRiversPage():
         {
             "title": "Select Point",
             "icon": "mdi-map-marker",
-            "content": [solara.Text("Point selection")],
+            "content": [PointStep(state, sepal_map)],
         },
         {
-            "title": "Basin Parameters",
+            "title": "Parameters",
             "icon": "mdi-tune",
-            "content": [solara.Text("Basin level and thresholds")],
+            "content": [ParamsStep(state)],
         },
         {
-            "title": "Results",
+            "title": "Delineation & Stats",
+            "icon": "mdi-source-branch",
+            "content": [DelineationStep(state, sepal_map, gee_interface)],
+        },
+        {
+            "title": "Dashboard",
             "icon": "mdi-chart-bar",
-            "content": [solara.Text("Forest change statistics")],
+            "content": [DashboardStep(state, theme_toggle)],
         },
     ]
 
