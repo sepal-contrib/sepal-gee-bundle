@@ -13,10 +13,28 @@ from .theme import use_echarts_theme
 @solara.component
 def OverallPie(state, theme_toggle):
     theme = use_echarts_theme(theme_toggle)
+    chart_ref = solara.use_ref(None)
+
     df = state.zonal_df.value
     selected = state.selected_var.value
+    empty = df is None or df.empty
 
-    if df is None or df.empty:
+    def on_click(params):
+        group = (params or {}).get("data", {}).get("_group")
+        if not group:
+            return
+        state.selected_var.value = "all" if selected == group else group
+
+    def _attach_click():
+        widget = chart_ref.current
+        if widget is None or not hasattr(widget, "on"):
+            return None
+        widget.on("click", None, on_click)
+        return lambda: widget.off("click", on_click)
+
+    solara.use_effect(_attach_click, [id(chart_ref.current), selected])
+
+    if empty:
         solara.Text("Run statistics to see the overall distribution.")
         return
 
@@ -31,35 +49,20 @@ def OverallPie(state, theme_toggle):
         for _, row in pie_df.iterrows()
     ]
 
-    pie = Pie(
-        radius=["50%", "70%"],
-        data=data,
-        label={"show": True, "formatter": "{b}: {d}%"},
-        emphasis={"scale": True, "scaleSize": 10},
-    )
-
     option = Option(
         title=Title(text="Overall forest change", left="center"),
         tooltip=Tooltip(trigger="item", formatter="{b}: {c} ha ({d}%)"),
         legend=Legend(orient="horizontal", bottom=0),
-        series=[pie],
+        series=[
+            Pie(
+                radius=["50%", "70%"],
+                data=data,
+                label={"show": True, "formatter": "{b}: {d}%"},
+                emphasis={"scale": True, "scaleSize": 10},
+            )
+        ],
     )
 
-    def on_click(params):
-        group = (params or {}).get("data", {}).get("_group")
-        if not group:
-            return
-        state.selected_var.value = "all" if selected == group else group
-
-    chart = EChartsWidget.element(
+    chart_ref.current = EChartsWidget.element(
         option=option, theme=theme, style={"height": "320px"}
     )
-
-    def _attach_click():
-        widget = getattr(chart, "widget", None)
-        if widget is not None:
-            widget.on("click", None, on_click)
-            return lambda: widget.off("click", on_click)
-        return None
-
-    solara.use_effect(_attach_click, [id(chart)])

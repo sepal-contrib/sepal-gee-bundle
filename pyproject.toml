@@ -12,6 +12,7 @@ dependencies = [
     "solara",
     "starlette<1.0",
     "ee-client>=2.5.0",
+    "ipecharts",
 ]
 
 [project.optional-dependencies]
