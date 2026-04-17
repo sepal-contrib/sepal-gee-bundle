@@ -2,6 +2,7 @@ from .gfc_classification import classify_gfc
 from .statistics import (
     add_catchment_colors,
     compute_zonal_stats,
+    get_overall_pie_df,
     parse_zonal_stats,
 )
 from .visualization import create_basins_layer, create_selection_layer
@@ -15,6 +16,7 @@ __all__ = [
     "create_basins_layer",
     "create_selection_layer",
     "get_hydroshed_collection",
+    "get_overall_pie_df",
     "get_upstream_basin_ids",
     "parse_zonal_stats",
 ]

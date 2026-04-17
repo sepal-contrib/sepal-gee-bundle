@@ -75,3 +75,13 @@ def add_catchment_colors(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     out["catch_color"] = out["basin"].astype(str).map(mapping)
     return out
+
+
+def get_overall_pie_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate area per group (change class) for the overall donut."""
+    if df.empty:
+        return pd.DataFrame(columns=["group", "area", "color"])
+
+    grouped = df.groupby("group", as_index=False)["area"].sum()
+    grouped["color"] = grouped["group"].map(GFC_COLORS_DICT).fillna("#888888")
+    return grouped.sort_values("area", ascending=False).reset_index(drop=True)

@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from apps.basin_rivers.scripts.statistics import add_catchment_colors
+from apps.basin_rivers.scripts.statistics import add_catchment_colors, get_overall_pie_df
 
 
 @pytest.fixture
@@ -44,3 +44,23 @@ class TestAddCatchmentColors:
         many = pd.DataFrame({"basin": [str(i) for i in range(30)], "area": [1.0] * 30})
         out = add_catchment_colors(many)
         assert out["catch_color"].notna().all()
+
+
+class TestGetOverallPieDf:
+    def test_groups_sum_area(self, sample_df):
+        out = get_overall_pie_df(sample_df)
+        expected_total = sample_df["area"].sum()
+        assert out["area"].sum() == pytest.approx(expected_total)
+
+    def test_one_row_per_group(self, sample_df):
+        out = get_overall_pie_df(sample_df)
+        assert out["group"].nunique() == len(out)
+
+    def test_color_column_present(self, sample_df):
+        out = get_overall_pie_df(sample_df)
+        assert "color" in out.columns
+        assert out["color"].notna().all()
+
+    def test_empty_df_returns_empty(self):
+        out = get_overall_pie_df(pd.DataFrame(columns=["basin", "group", "area"]))
+        assert out.empty
