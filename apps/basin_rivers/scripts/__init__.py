@@ -4,6 +4,7 @@ from .statistics import (
     compute_zonal_stats,
     get_catchment_bar_df,
     get_catchment_pie_df,
+    get_loss_trend_df,
     get_overall_pie_df,
     parse_zonal_stats,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "get_catchment_bar_df",
     "get_catchment_pie_df",
     "get_hydroshed_collection",
+    "get_loss_trend_df",
     "get_overall_pie_df",
     "get_upstream_basin_ids",
     "parse_zonal_stats",

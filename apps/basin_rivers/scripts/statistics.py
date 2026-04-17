@@ -141,3 +141,28 @@ def get_catchment_bar_df(
     grouped = work.groupby("basin", as_index=False)["area"].sum()
     colors = work.drop_duplicates("basin")[["basin", "catch_color"]]
     return grouped.merge(colors, on="basin", how="left"), "single"
+
+
+def get_loss_trend_df(
+    df: pd.DataFrame,
+    basins: list[str],
+    timespan: tuple[int, int],
+) -> pd.DataFrame:
+    """Per-basin, per-year loss areas for the trend line chart."""
+    if df.empty or not basins:
+        return pd.DataFrame(columns=["basin", "year", "area", "catch_color"])
+
+    from_, to = timespan
+    basin_strs = [str(b) for b in basins]
+    mask = (
+        (df["group"] == "loss")
+        & df["year"].between(from_, to)
+        & df["basin"].astype(str).isin(basin_strs)
+    )
+    loss = df.loc[mask]
+    if loss.empty:
+        return pd.DataFrame(columns=["basin", "year", "area", "catch_color"])
+
+    grouped = loss.groupby(["basin", "year"], as_index=False)["area"].sum()
+    colors = loss.drop_duplicates("basin")[["basin", "catch_color"]]
+    return grouped.merge(colors, on="basin", how="left").sort_values(["basin", "year"])

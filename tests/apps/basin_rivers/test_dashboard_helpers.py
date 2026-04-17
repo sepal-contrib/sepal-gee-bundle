@@ -7,6 +7,7 @@ from apps.basin_rivers.scripts.statistics import (
     add_catchment_colors,
     get_catchment_bar_df,
     get_catchment_pie_df,
+    get_loss_trend_df,
     get_overall_pie_df,
 )
 
@@ -121,3 +122,35 @@ class TestGetCatchmentBarDf:
     def test_loss_mode_respects_timespan(self, colored_df):
         out, mode = get_catchment_bar_df(colored_df, "loss", (2002, 2020))
         assert out.empty or (out["year"] >= 2002).all()
+
+
+class TestGetLossTrendDf:
+    @pytest.fixture
+    def colored_df(self):
+        df = pd.DataFrame(
+            {
+                "basin": ["1", "1", "2", "2"],
+                "variable": [1, 2, 1, 2],
+                "area": [5.0, 10.0, 3.0, 8.0],
+                "group": ["loss", "loss", "loss", "loss"],
+                "year": [2001, 2002, 2001, 2002],
+                "color": ["#a"] * 4,
+            }
+        )
+        return add_catchment_colors(df)
+
+    def test_filters_to_selected_basins(self, colored_df):
+        out = get_loss_trend_df(colored_df, ["1"], (2001, 2020))
+        assert set(out["basin"]) == {"1"}
+
+    def test_filters_by_timespan(self, colored_df):
+        out = get_loss_trend_df(colored_df, ["1", "2"], (2002, 2002))
+        assert set(out["year"]) == {2002}
+
+    def test_empty_selection(self, colored_df):
+        out = get_loss_trend_df(colored_df, [], (2001, 2020))
+        assert out.empty
+
+    def test_returns_catch_color(self, colored_df):
+        out = get_loss_trend_df(colored_df, ["1"], (2001, 2020))
+        assert "catch_color" in out.columns
