@@ -120,7 +120,7 @@ class TestGetCatchmentBarDf:
         assert (out["year"] >= 2001).all() and (out["year"] <= 2020).all()
 
     def test_loss_mode_respects_timespan(self, colored_df):
-        out, mode = get_catchment_bar_df(colored_df, "loss", (2002, 2020))
+        out, _mode = get_catchment_bar_df(colored_df, "loss", (2002, 2020))
         assert out.empty or (out["year"] >= 2002).all()
 
 

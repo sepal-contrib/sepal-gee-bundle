@@ -63,6 +63,4 @@ def OverallPie(state, theme_toggle):
         ],
     )
 
-    chart_ref.current = EChartsWidget.element(
-        option=option, theme=theme, style={"height": "320px"}
-    )
+    chart_ref.current = EChartsWidget.element(option=option, theme=theme, style={"height": "320px"})

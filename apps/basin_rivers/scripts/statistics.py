@@ -3,7 +3,13 @@
 import ee
 import pandas as pd
 
-from apps.basin_rivers.params import GFC_COLORS_DICT, GFC_DATASET, GFC_MAX_YEAR, GFC_TRANSLATION
+from apps.basin_rivers.params import (
+    CATCH_COLOR_PALETTE,
+    GFC_COLORS_DICT,
+    GFC_DATASET,
+    GFC_MAX_YEAR,
+    GFC_TRANSLATION,
+)
 
 
 def compute_zonal_stats(
@@ -55,9 +61,6 @@ def parse_zonal_stats(raw_result: dict) -> pd.DataFrame:
     df["color"] = df["group"].map(GFC_COLORS_DICT).fillna("#888888")
 
     return df
-
-
-from apps.basin_rivers.params import CATCH_COLOR_PALETTE
 
 
 def add_catchment_colors(df: pd.DataFrame) -> pd.DataFrame:

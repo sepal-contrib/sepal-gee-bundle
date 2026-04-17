@@ -161,7 +161,7 @@ class TestDashboardParams:
             assert key in VARIABLE_LABELS
 
     def test_chart_titles_have_per_variable_keys(self):
-        from apps.basin_rivers.params import CATCH_PIE_TITLES, CATCH_BAR_TITLES
+        from apps.basin_rivers.params import CATCH_BAR_TITLES, CATCH_PIE_TITLES
 
         for key in ["all", "forest", "loss", "gain", "non_forest", "gain_loss"]:
             assert key in CATCH_PIE_TITLES
