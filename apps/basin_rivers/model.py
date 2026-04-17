@@ -5,11 +5,33 @@ class BasinRiversState:
     """Reactive state for Upstream Watershed & Forest Stats."""
 
     def __init__(self):
-        self.aoi = solara.reactive(None)
+        # --- Pour point ---
         self.lat = solara.reactive(None)
         self.lon = solara.reactive(None)
+        self.manual_coords = solara.reactive(False)
+
+        # --- Basin parameters ---
         self.level = solara.reactive(8)
         self.year_start = solara.reactive(2010)
         self.year_end = solara.reactive(2020)
         self.treecover = solara.reactive(80)
+
+        # --- Delineation results ---
+        self.hybasin_list = solara.reactive([])
+        self.method = solara.reactive("all")
         self.selected_basins = solara.reactive([])
+
+        # --- GEE objects (held in memory, not serializable) ---
+        self.upstream_fc = solara.reactive(None)
+        self.forest_change = solara.reactive(None)
+
+        # --- Statistics ---
+        self.zonal_df = solara.reactive(None)
+
+        # --- Task state ---
+        self.loading = solara.reactive(False)
+
+        # --- Dashboard state ---
+        self.selected_var = solara.reactive("all")
+        self.selected_hybasid_chart = solara.reactive([])
+        self.sett_timespan = solara.reactive((2010, 2020))
