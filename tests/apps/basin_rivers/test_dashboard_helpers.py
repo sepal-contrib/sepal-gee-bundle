@@ -3,7 +3,11 @@
 import pandas as pd
 import pytest
 
-from apps.basin_rivers.scripts.statistics import add_catchment_colors, get_overall_pie_df
+from apps.basin_rivers.scripts.statistics import (
+    add_catchment_colors,
+    get_catchment_pie_df,
+    get_overall_pie_df,
+)
 
 
 @pytest.fixture
@@ -63,4 +67,29 @@ class TestGetOverallPieDf:
 
     def test_empty_df_returns_empty(self):
         out = get_overall_pie_df(pd.DataFrame(columns=["basin", "group", "area"]))
+        assert out.empty
+
+
+class TestGetCatchmentPieDf:
+    @pytest.fixture
+    def colored_df(self, sample_df):
+        return add_catchment_colors(sample_df)
+
+    def test_all_sums_all_groups(self, colored_df):
+        out = get_catchment_pie_df(colored_df, selected_var="all")
+        assert set(out["basin"]) == {"1", "2", "3"}
+        assert out.loc[out.basin == "1", "area"].iloc[0] == 30.0
+
+    def test_specific_class_filters(self, colored_df):
+        out = get_catchment_pie_df(colored_df, selected_var="forest")
+        assert set(out["basin"]) == {"1", "3"}
+        assert out.loc[out.basin == "1", "area"].iloc[0] == 20.0
+
+    def test_carries_catch_color(self, colored_df):
+        out = get_catchment_pie_df(colored_df, selected_var="all")
+        assert "catch_color" in out.columns
+        assert out["catch_color"].notna().all()
+
+    def test_unknown_var_returns_empty(self, colored_df):
+        out = get_catchment_pie_df(colored_df, selected_var="nope")
         assert out.empty

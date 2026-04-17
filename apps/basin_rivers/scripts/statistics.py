@@ -85,3 +85,25 @@ def get_overall_pie_df(df: pd.DataFrame) -> pd.DataFrame:
     grouped = df.groupby("group", as_index=False)["area"].sum()
     grouped["color"] = grouped["group"].map(GFC_COLORS_DICT).fillna("#888888")
     return grouped.sort_values("area", ascending=False).reset_index(drop=True)
+
+
+_VAR_KEYS = {"all", "forest", "loss", "gain", "non_forest", "gain_loss"}
+
+
+def get_catchment_pie_df(df: pd.DataFrame, selected_var: str) -> pd.DataFrame:
+    """Aggregate area per basin for the detail donut.
+
+    - selected_var == "all" → sum over all groups.
+    - specific class → filter rows with that group, then sum.
+    Returns columns: basin, area, catch_color.
+    """
+    if df.empty or selected_var not in _VAR_KEYS:
+        return pd.DataFrame(columns=["basin", "area", "catch_color"])
+
+    work = df if selected_var == "all" else df[df["group"] == selected_var]
+    if work.empty:
+        return pd.DataFrame(columns=["basin", "area", "catch_color"])
+
+    grouped = work.groupby("basin", as_index=False)["area"].sum()
+    colors = work.drop_duplicates("basin")[["basin", "catch_color"]]
+    return grouped.merge(colors, on="basin", how="left")
