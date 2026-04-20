@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a reusable `PdfReportButton` Solara component in pysepal that captures a live ipyleaflet map + ECharts widgets in the browser and composes a single long-page PDF in Python with reportlab, and wire it into the basin-rivers dashboard modal as the first consumer.
+**Goal:** Build a reusable `PdfReportButton` Solara component (as a top-level `pdf_report/` package in the bundle repo) that captures a live ipyleaflet map + ECharts widgets in the browser and composes a single long-page PDF in Python with reportlab, and wire it into the basin-rivers dashboard modal as the first consumer. After field-testing, the package is expected to be promoted into pysepal.
 
 **Architecture:** Hybrid client/server. Browser side (`html2canvas` loaded from CDN + ECharts native `getDataURL`) captures images and posts them back to Python via a Vuetify-template traitlet. Python side (`reportlab`) composes a PDF, base64-encodes it, pushes it back to the template which triggers an anchor-click download. Legend is re-drawn natively (vector) in Python from the same `LegendData` dataclass the Vue legend uses; no DOM capture for the legend.
 
@@ -12,22 +12,19 @@
 
 ## File Structure
 
-**pysepal repo** (`~/1_modules/pysepal/`):
+All work happens in the **sepal-gee-bundle** repo (`~/1_modules/sepal-gee-bundle/`). The `pdf_report/` package lives at the repo root so any bundle app can `from pdf_report import ...`. After field-testing, the package may be promoted into pysepal — that's a move + import-rename only.
 
 - Modify: `pyproject.toml` — add `reportlab>=4,<5` to runtime deps; add `pypdf>=4` to `dev` extra.
-- Create: `pysepal/solara/components/pdf_report/__init__.py` — public re-exports.
-- Create: `pysepal/solara/components/pdf_report/models.py` — capture spec dataclasses + `PdfReportConfig`.
-- Create: `pysepal/solara/components/pdf_report/legend.py` — `LegendFlowable` + color interpolation helpers.
-- Create: `pysepal/solara/components/pdf_report/builder.py` — `build_pdf_report()` pure function.
-- Create: `pysepal/solara/components/pdf_report/button.py` — `PdfReportButton` Solara component + internal `_CaptureTemplate`.
-- Create: `pysepal/solara/components/pdf_report/tests/__init__.py` — empty.
-- Create: `pysepal/solara/components/pdf_report/tests/test_models.py`.
-- Create: `pysepal/solara/components/pdf_report/tests/test_legend.py`.
-- Create: `pysepal/solara/components/pdf_report/tests/test_builder.py`.
-- Create: `pysepal/solara/components/pdf_report/tests/test_button.py`.
-
-**sepal-gee-bundle repo** (`~/1_modules/sepal-gee-bundle/`):
-
+- Create: `pdf_report/__init__.py` — public re-exports.
+- Create: `pdf_report/models.py` — capture spec dataclasses + `PdfReportConfig`.
+- Create: `pdf_report/legend.py` — `LegendFlowable` + color interpolation helpers.
+- Create: `pdf_report/builder.py` — `build_pdf_report()` pure function.
+- Create: `pdf_report/button.py` — `PdfReportButton` Solara component + internal `_CaptureTemplate`.
+- Create: `pdf_report/tests/__init__.py` — empty.
+- Create: `pdf_report/tests/test_models.py`.
+- Create: `pdf_report/tests/test_legend.py`.
+- Create: `pdf_report/tests/test_builder.py`.
+- Create: `pdf_report/tests/test_button.py`.
 - Modify: `apps/basin_rivers/components/dashboard/overall_pie.py` — wrap chart in a div with class `br-echart-overall`.
 - Modify: `apps/basin_rivers/components/dashboard/catchment_pie.py` — wrap with class `br-echart-catchment-pie`.
 - Modify: `apps/basin_rivers/components/dashboard/catchment_bar.py` — wrap with class `br-echart-catchment-bar`.
@@ -36,24 +33,22 @@
 - Modify: `apps/basin_rivers/components/dashboard_step.py` — accept `legend_data`, render `PdfReportButton` in the modal next to the CSV download.
 - Modify: `apps/basin_rivers/CLAUDE.md` — append a short "PDF export" section with the manual smoke test.
 
-No bundle `pyproject.toml` changes: `reportlab` and `pypdf` become transitive deps via the pysepal install.
-
 ---
 
 ## Task 1: Add dependencies and verify install
 
 **Files:**
-- Modify: `/home/dguerrero/1_modules/pysepal/pyproject.toml`
+- Modify: `/home/dguerrero/1_modules/sepal-gee-bundle/pyproject.toml`
 
-- [ ] **Step 1: Add `reportlab` to pysepal runtime deps**
+- [ ] **Step 1: Add `reportlab` to bundle runtime deps**
 
-Edit `/home/dguerrero/1_modules/pysepal/pyproject.toml`. Inside the `[project] dependencies = [...]` list, add one entry at the end of the existing list (just before the closing `]`):
+Edit `/home/dguerrero/1_modules/sepal-gee-bundle/pyproject.toml`. Inside the `[project] dependencies = [...]` list (currently: `pysepal`, `solara`, `starlette<1.0`, `ee-client>=2.5.0`, `ipecharts`), add one entry at the end of the existing list (just before the closing `]`):
 
 ```toml
     "reportlab>=4,<5",
 ```
 
-- [ ] **Step 2: Add `pypdf` to pysepal `dev` extra**
+- [ ] **Step 2: Add `pypdf` to bundle `dev` extra**
 
 In the same file, inside `[project.optional-dependencies].dev = [...]`, add:
 
@@ -66,7 +61,7 @@ In the same file, inside `[project.optional-dependencies].dev = [...]`, add:
 Run:
 
 ```bash
-conda run -n sepal-gee-bundle pip install -e "/home/dguerrero/1_modules/pysepal[dev]"
+conda run -n sepal-gee-bundle pip install -e "/home/dguerrero/1_modules/sepal-gee-bundle[dev]"
 ```
 
 Expected: pip resolves and installs `reportlab` and `pypdf` without errors. If `reportlab` needs a compiler on this platform it will use a prebuilt wheel; no extra system deps required on Ubuntu x86_64.
@@ -84,7 +79,7 @@ Expected: prints a reportlab version starting with `4.` and a pypdf version star
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /home/dguerrero/1_modules/pysepal
+cd /home/dguerrero/1_modules/sepal-gee-bundle
 git add pyproject.toml
 git commit -m "feat(pdf-report): add reportlab runtime dep, pypdf dev dep"
 ```
@@ -94,24 +89,24 @@ git commit -m "feat(pdf-report): add reportlab runtime dep, pypdf dev dep"
 ## Task 2: Scaffold the `pdf_report` package
 
 **Files:**
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/__init__.py`
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/models.py` (empty)
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/legend.py` (empty)
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/builder.py` (empty)
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/button.py` (empty)
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/__init__.py` (empty)
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/__init__.py`
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/models.py` (empty)
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/legend.py` (empty)
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/builder.py` (empty)
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/button.py` (empty)
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/__init__.py` (empty)
 
 - [ ] **Step 1: Create the package directory**
 
 ```bash
-mkdir -p /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests
+mkdir -p /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests
 ```
 
 - [ ] **Step 2: Create empty stub files**
 
 Create six empty files at the paths above. The package `__init__.py` starts as a single docstring:
 
-`/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/__init__.py`:
+`/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/__init__.py`:
 
 ```python
 """Reusable PDF report export for pysepal Solara apps.
@@ -131,7 +126,7 @@ The other five files (`models.py`, `legend.py`, `builder.py`, `button.py`, `test
 - [ ] **Step 3: Verify the package is importable**
 
 ```bash
-conda run -n sepal-gee-bundle python -c "import pysepal.solara.components.pdf_report; print('ok')"
+conda run -n sepal-gee-bundle python -c "import pdf_report; print('ok')"
 ```
 
 Expected: prints `ok` with no traceback.
@@ -139,8 +134,8 @@ Expected: prints `ok` with no traceback.
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /home/dguerrero/1_modules/pysepal
-git add pysepal/solara/components/pdf_report/
+cd /home/dguerrero/1_modules/sepal-gee-bundle
+git add pdf_report/
 git commit -m "feat(pdf-report): scaffold pdf_report package"
 ```
 
@@ -149,8 +144,8 @@ git commit -m "feat(pdf-report): scaffold pdf_report package"
 ## Task 3: Implement `models.py` (dataclasses)
 
 **Files:**
-- Create (contents): `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/models.py`
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_models.py`
+- Create (contents): `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/models.py`
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_models.py`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -161,7 +156,7 @@ Write `tests/test_models.py`:
 
 import pytest
 
-from pysepal.solara.components.pdf_report.models import (
+from pdf_report.models import (
     EChartCapture,
     LegendCapture,
     MapCapture,
@@ -252,14 +247,14 @@ class TestPdfReportConfig:
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_models.py -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_models.py -v
 ```
 
 Expected: all tests fail with `ImportError` or `ModuleNotFoundError` because `models.py` is empty.
 
 - [ ] **Step 3: Implement `models.py`**
 
-Write to `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/models.py`:
+Write to `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/models.py`:
 
 ```python
 """Dataclasses for PDF report captures and config.
@@ -354,7 +349,7 @@ __all__ = [
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_models.py -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_models.py -v
 ```
 
 Expected: all tests pass.
@@ -362,8 +357,8 @@ Expected: all tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /home/dguerrero/1_modules/pysepal
-git add pysepal/solara/components/pdf_report/models.py pysepal/solara/components/pdf_report/tests/test_models.py
+cd /home/dguerrero/1_modules/sepal-gee-bundle
+git add pdf_report/models.py pdf_report/tests/test_models.py
 git commit -m "feat(pdf-report): capture spec + PdfReportConfig dataclasses"
 ```
 
@@ -372,8 +367,8 @@ git commit -m "feat(pdf-report): capture spec + PdfReportConfig dataclasses"
 ## Task 4: Implement `legend.py` (native vector legend Flowable)
 
 **Files:**
-- Create (contents): `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/legend.py`
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_legend.py`
+- Create (contents): `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/legend.py`
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_legend.py`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -387,7 +382,7 @@ import io
 import pytest
 from reportlab.pdfgen import canvas as rl_canvas
 
-from pysepal.solara.components.pdf_report.legend import (
+from pdf_report.legend import (
     LegendFlowable,
     _hex_to_rgb,
     _sample_gradient,
@@ -470,14 +465,14 @@ class TestLegendFlowable:
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_legend.py -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_legend.py -v
 ```
 
 Expected: all tests fail with `ImportError`.
 
 - [ ] **Step 3: Implement `legend.py`**
 
-Write to `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/legend.py`:
+Write to `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/legend.py`:
 
 ```python
 """Native vector legend Flowable for reportlab PDFs.
@@ -649,7 +644,7 @@ __all__ = ["LegendFlowable"]
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_legend.py -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_legend.py -v
 ```
 
 Expected: all tests pass.
@@ -657,8 +652,8 @@ Expected: all tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /home/dguerrero/1_modules/pysepal
-git add pysepal/solara/components/pdf_report/legend.py pysepal/solara/components/pdf_report/tests/test_legend.py
+cd /home/dguerrero/1_modules/sepal-gee-bundle
+git add pdf_report/legend.py pdf_report/tests/test_legend.py
 git commit -m "feat(pdf-report): LegendFlowable with native vector gradients and chips"
 ```
 
@@ -667,8 +662,8 @@ git commit -m "feat(pdf-report): LegendFlowable with native vector gradients and
 ## Task 5: Implement `builder.py` (pure compose function)
 
 **Files:**
-- Create (contents): `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/builder.py`
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_builder.py`
+- Create (contents): `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/builder.py`
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_builder.py`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -682,8 +677,8 @@ import io
 import pypdf
 import pytest
 
-from pysepal.solara.components.pdf_report.builder import build_pdf_report
-from pysepal.solara.components.pdf_report.models import (
+from pdf_report.builder import build_pdf_report
+from pdf_report.models import (
     EChartCapture,
     LegendCapture,
     MapCapture,
@@ -817,14 +812,14 @@ class TestBuildPdfReport:
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_builder.py -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_builder.py -v
 ```
 
 Expected: all tests fail with `ImportError`.
 
 - [ ] **Step 3: Implement `builder.py`**
 
-Write to `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/builder.py`:
+Write to `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/builder.py`:
 
 ```python
 """Pure compose function: turns capture specs + image bytes into a PDF.
@@ -1085,7 +1080,7 @@ __all__ = ["build_pdf_report"]
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_builder.py -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_builder.py -v
 ```
 
 Expected: all tests pass. If `test_tall_content_falls_back_to_a4_multipage` is slow (>5s), that's acceptable — it's intentionally building a large document.
@@ -1093,8 +1088,8 @@ Expected: all tests pass. If `test_tall_content_falls_back_to_a4_multipage` is s
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /home/dguerrero/1_modules/pysepal
-git add pysepal/solara/components/pdf_report/builder.py pysepal/solara/components/pdf_report/tests/test_builder.py
+cd /home/dguerrero/1_modules/sepal-gee-bundle
+git add pdf_report/builder.py pdf_report/tests/test_builder.py
 git commit -m "feat(pdf-report): build_pdf_report compose function with single long-page + A4 fallback"
 ```
 
@@ -1103,8 +1098,8 @@ git commit -m "feat(pdf-report): build_pdf_report compose function with single l
 ## Task 6: Implement `button.py` (Solara component + capture template)
 
 **Files:**
-- Create (contents): `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/button.py`
-- Create: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_button.py`
+- Create (contents): `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/button.py`
+- Create: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_button.py`
 
 Button testing is shallow by design — the capture flow is JS + browser, not directly unit-testable. The test just asserts the module imports cleanly and that the helper that serializes capture specs behaves correctly.
 
@@ -1125,12 +1120,12 @@ import pytest
 
 
 def test_module_imports():
-    from pysepal.solara.components.pdf_report.button import PdfReportButton  # noqa: F401
+    from pdf_report.button import PdfReportButton  # noqa: F401
 
 
 def test_serialize_capture_specs_map_and_echart():
-    from pysepal.solara.components.pdf_report.button import _serialize_capture_specs
-    from pysepal.solara.components.pdf_report.models import (
+    from pdf_report.button import _serialize_capture_specs
+    from pdf_report.models import (
         EChartCapture,
         LegendCapture,
         MapCapture,
@@ -1155,7 +1150,7 @@ def test_serialize_capture_specs_map_and_echart():
 def test_decode_image_map_strips_data_url_prefix_and_sentinels():
     import base64
 
-    from pysepal.solara.components.pdf_report.button import _decode_image_map
+    from pdf_report.button import _decode_image_map
 
     raw = b"hello"
     b64 = base64.b64encode(raw).decode("ascii")
@@ -1171,14 +1166,14 @@ def test_decode_image_map_strips_data_url_prefix_and_sentinels():
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_button.py -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_button.py -v
 ```
 
 Expected: all tests fail with `ImportError`.
 
 - [ ] **Step 3: Implement `button.py`**
 
-Write to `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/button.py`:
+Write to `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/button.py`:
 
 ```python
 """PdfReportButton — Solara trigger for the pdf_report capture pipeline.
@@ -1477,7 +1472,7 @@ __all__ = ["PdfReportButton"]
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/test_button.py -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/test_button.py -v
 ```
 
 Expected: all 3 tests pass.
@@ -1485,8 +1480,8 @@ Expected: all 3 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /home/dguerrero/1_modules/pysepal
-git add pysepal/solara/components/pdf_report/button.py pysepal/solara/components/pdf_report/tests/test_button.py
+cd /home/dguerrero/1_modules/sepal-gee-bundle
+git add pdf_report/button.py pdf_report/tests/test_button.py
 git commit -m "feat(pdf-report): PdfReportButton Solara component + capture template"
 ```
 
@@ -1495,11 +1490,11 @@ git commit -m "feat(pdf-report): PdfReportButton Solara component + capture temp
 ## Task 7: Re-export public API from package `__init__.py`
 
 **Files:**
-- Modify: `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/__init__.py`
+- Modify: `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/__init__.py`
 
 - [ ] **Step 1: Extend `__init__.py` with re-exports**
 
-Open `/home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/__init__.py` and append (keeping the existing module docstring):
+Open `/home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/__init__.py` and append (keeping the existing module docstring):
 
 ```python
 from .builder import build_pdf_report
@@ -1528,7 +1523,7 @@ __all__ = [
 - [ ] **Step 2: Verify the public API is importable**
 
 ```bash
-conda run -n sepal-gee-bundle python -c "from pysepal.solara.components.pdf_report import PdfReportButton, PdfReportConfig, MapCapture, EChartCapture, LegendCapture, StatsTableCapture, build_pdf_report; print('ok')"
+conda run -n sepal-gee-bundle python -c "from pdf_report import PdfReportButton, PdfReportConfig, MapCapture, EChartCapture, LegendCapture, StatsTableCapture, build_pdf_report; print('ok')"
 ```
 
 Expected: prints `ok` with no traceback.
@@ -1536,7 +1531,7 @@ Expected: prints `ok` with no traceback.
 - [ ] **Step 3: Run the full pdf_report test suite**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/ -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/ -v
 ```
 
 Expected: all tests (models + legend + builder + button) pass.
@@ -1544,8 +1539,8 @@ Expected: all tests (models + legend + builder + button) pass.
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /home/dguerrero/1_modules/pysepal
-git add pysepal/solara/components/pdf_report/__init__.py
+cd /home/dguerrero/1_modules/sepal-gee-bundle
+git add pdf_report/__init__.py
 git commit -m "feat(pdf-report): re-export public API from package __init__"
 ```
 
@@ -1723,7 +1718,7 @@ git commit -m "feat(basin_rivers): thread legend_data reactive into DashboardSte
 At the top of `dashboard_step.py`, after the existing imports:
 
 ```python
-from pysepal.solara.components.pdf_report import (
+from pdf_report import (
     EChartCapture,
     LegendCapture,
     MapCapture,
@@ -1918,7 +1913,7 @@ Append to `/home/dguerrero/1_modules/sepal-gee-bundle/apps/basin_rivers/CLAUDE.m
 ## PDF export
 
 The dashboard modal's **Download PDF** button calls
-`pysepal.solara.components.pdf_report.PdfReportButton`. It captures the live
+`pdf_report.PdfReportButton`. It captures the live
 map (via html2canvas) and each ECharts chart (via the native
 `getDataURL()`), re-draws the legend natively in reportlab, and hands the
 browser a PDF download.
@@ -1957,15 +1952,15 @@ git commit -m "feat(basin_rivers): PDF report export from dashboard modal"
 
 ## Post-implementation verification
 
-- [ ] **Full pysepal test suite for pdf_report**
+- [ ] **Full pdf_report test suite**
 
 ```bash
-conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/pysepal/pysepal/solara/components/pdf_report/tests/ -v
+conda run -n sepal-gee-bundle pytest /home/dguerrero/1_modules/sepal-gee-bundle/pdf_report/tests/ -v
 ```
 
 Expected: all tests pass.
 
-- [ ] **Bundle lint**
+- [ ] **Lint basin-rivers changes**
 
 ```bash
 conda run -n sepal-gee-bundle ruff check /home/dguerrero/1_modules/sepal-gee-bundle/apps/basin_rivers/
@@ -1973,10 +1968,10 @@ conda run -n sepal-gee-bundle ruff check /home/dguerrero/1_modules/sepal-gee-bun
 
 Expected: no new violations.
 
-- [ ] **pysepal lint**
+- [ ] **Lint pdf_report package**
 
 ```bash
-cd /home/dguerrero/1_modules/pysepal && conda run -n sepal-gee-bundle ruff check pysepal/solara/components/pdf_report/
+cd /home/dguerrero/1_modules/sepal-gee-bundle && conda run -n sepal-gee-bundle ruff check pdf_report/
 ```
 
 Expected: no violations.
@@ -1988,7 +1983,7 @@ Expected: no violations.
 | Spec item | Task |
 |---|---|
 | reportlab runtime dep, pypdf dev dep | 1 |
-| Package scaffold at `pysepal/solara/components/pdf_report/` | 2, 7 |
+| Package scaffold at `pdf_report/` | 2, 7 |
 | `MapCapture` / `EChartCapture` / `LegendCapture` / `StatsTableCapture` / `PdfReportConfig` | 3 |
 | `LegendFlowable` (native vector) + helpers | 4 |
 | `build_pdf_report()` pure compose + A4 multipage fallback | 5 |
