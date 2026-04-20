@@ -154,20 +154,47 @@ _CAPTURE_TEMPLATE = """
             this._log('map capture complete: ' + spec.selector + ' (' + canvas.width + 'x' + canvas.height + ')');
             return canvas.toDataURL('image/png');
         },
-        async _findEchartsInstance(el) {
-            const deadline = Date.now() + 500;
-            while (Date.now() < deadline) {
-                if (window.echarts) {
-                    let inst = window.echarts.getInstanceByDom(el);
-                    if (!inst) {
-                        const child = el.querySelector('[_echarts_instance_]');
-                        if (child) inst = window.echarts.getInstanceByDom(child);
-                    }
+        _findEchartsInstanceSync(root) {
+            // Try multiple strategies:
+            //   1. Walk root + descendants and call window.echarts.getInstanceByDom
+            //   2. Find any [_echarts_instance_] marker and resolve by id
+            //   3. Inspect elements for the internal __ECHARTS_INSTANCE__ property
+            const all = [root, ...root.querySelectorAll('*')];
+            if (window.echarts && typeof window.echarts.getInstanceByDom === 'function') {
+                for (const el of all) {
+                    const inst = window.echarts.getInstanceByDom(el);
                     if (inst) return inst;
                 }
-                await new Promise(r => setTimeout(r, 50));
+                const marked = root.querySelector('[_echarts_instance_]');
+                if (marked && typeof window.echarts.getInstanceById === 'function') {
+                    const id = marked.getAttribute('_echarts_instance_');
+                    const inst = window.echarts.getInstanceById(id);
+                    if (inst) return inst;
+                }
+            }
+            for (const el of all) {
+                if (el.__ECHARTS_INSTANCE__) return el.__ECHARTS_INSTANCE__;
             }
             return null;
+        },
+        async _findEchartsInstance(root) {
+            const deadline = Date.now() + 1000;
+            while (Date.now() < deadline) {
+                const inst = this._findEchartsInstanceSync(root);
+                if (inst) return inst;
+                await new Promise(r => setTimeout(r, 100));
+            }
+            return null;
+        },
+        async _rasterizeElement(el, label) {
+            this._log(label + ': falling back to html2canvas rasterization');
+            const h2c = await this._loadHtml2Canvas();
+            const canvas = await this._withTimeout(
+                h2c(el, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false }),
+                15000,
+                label
+            );
+            return canvas.toDataURL('image/png');
         },
         async _captureEchart(spec) {
             this._log('echart capture start: ' + spec.selector);
@@ -179,20 +206,33 @@ _CAPTURE_TEMPLATE = """
                 }
                 throw new Error('echart selector not found: ' + spec.selector);
             }
+            this._log(
+                'echart element found (rect ' + el.clientWidth + 'x' + el.clientHeight +
+                '; descendants=' + el.querySelectorAll('*').length +
+                '; typeof window.echarts=' + (typeof window.echarts) + ')'
+            );
             const inst = await this._findEchartsInstance(el);
-            if (!inst) {
+            if (inst) {
+                const url = inst.getDataURL({
+                    pixelRatio: spec.pixel_ratio || 2,
+                    backgroundColor: '#ffffff',
+                });
+                this._log('echart capture via getDataURL: ' + spec.selector);
+                return url;
+            }
+            // Instance not reachable — rasterize the container with html2canvas.
+            this._log('echart instance not found via any strategy for ' + spec.selector);
+            try {
+                const url = await this._rasterizeElement(el, 'echart rasterize ' + spec.selector);
+                this._log('echart capture via html2canvas: ' + spec.selector);
+                return url;
+            } catch (e) {
                 if (spec.optional) {
-                    this._log('echart optional instance missing, skipping: ' + spec.selector);
+                    this._log('echart optional rasterize failed, skipping: ' + spec.selector);
                     return null;
                 }
-                throw new Error('ECharts instance not found for selector: ' + spec.selector);
+                throw e;
             }
-            const url = inst.getDataURL({
-                pixelRatio: spec.pixel_ratio || 2,
-                backgroundColor: '#ffffff',
-            });
-            this._log('echart capture complete: ' + spec.selector);
-            return url;
         },
         async _runCapture() {
             if (this._pysepal_busy) {
