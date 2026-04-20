@@ -54,27 +54,62 @@ _CAPTURE_TEMPLATE = """
         download_tick() { this._triggerDownload(); }
     },
     methods: {
+        _log(msg) {
+            const text = '[pdf_report] ' + String(msg);
+            try { console.log(text); } catch (_e) {}
+            this.log_message = text;
+            this.log_tick = (this.log_tick || 0) + 1;
+        },
         _loadHtml2Canvas() {
-            if (window.html2canvas) return Promise.resolve(window.html2canvas);
-            if (window.__pysepal_h2c_promise__) return window.__pysepal_h2c_promise__;
+            const self = this;
+            if (typeof window.html2canvas === 'function') {
+                self._log('html2canvas already present');
+                return Promise.resolve(window.html2canvas);
+            }
+            if (window.__pysepal_h2c_promise__) {
+                self._log('html2canvas load already in-flight');
+                return window.__pysepal_h2c_promise__;
+            }
+            self._log('injecting html2canvas script from __H2C_URL__');
             window.__pysepal_h2c_promise__ = new Promise((resolve, reject) => {
                 const s = document.createElement('script');
                 s.src = '__H2C_URL__';
-                s.onload = () => resolve(window.html2canvas);
-                s.onerror = () => reject(new Error('failed to load html2canvas'));
+                s.crossOrigin = 'anonymous';
+                s.onload = () => {
+                    const t = typeof window.html2canvas;
+                    self._log('html2canvas script onload fired; typeof window.html2canvas = ' + t);
+                    if (t === 'function') {
+                        resolve(window.html2canvas);
+                    } else {
+                        reject(new Error(
+                            'html2canvas script loaded but window.html2canvas is ' + t +
+                            ' (CSP, ad-blocker, or CDN mismatch?)'
+                        ));
+                    }
+                };
+                s.onerror = (ev) => {
+                    self._log('html2canvas script onerror fired');
+                    reject(new Error('failed to load html2canvas from CDN'));
+                };
                 document.head.appendChild(s);
             });
             return window.__pysepal_h2c_promise__;
         },
         async _waitForTiles(root, timeoutMs) {
             const deadline = Date.now() + timeoutMs;
+            let lastCount = -1;
             while (Date.now() < deadline) {
                 const tiles = root.querySelectorAll('.leaflet-tile');
                 const loaded = root.querySelectorAll('.leaflet-tile-loaded');
+                if (loaded.length !== lastCount) {
+                    this._log('tile wait: ' + loaded.length + ' / ' + tiles.length + ' loaded');
+                    lastCount = loaded.length;
+                }
                 if (tiles.length === 0) return;
                 if (loaded.length === tiles.length) return;
                 await new Promise(r => setTimeout(r, 150));
             }
+            this._log('tile wait: deadline reached, proceeding');
         },
         async _withTimeout(p, ms, label) {
             let to;
@@ -85,15 +120,21 @@ _CAPTURE_TEMPLATE = """
             finally { clearTimeout(to); }
         },
         async _captureMap(spec) {
+            this._log('map capture start: ' + spec.selector);
             const h2c = await this._loadHtml2Canvas();
+            if (typeof h2c !== 'function') {
+                throw new Error('html2canvas not callable after load (typeof = ' + (typeof h2c) + ')');
+            }
             const el = document.querySelector(spec.selector);
-            if (!el) throw new Error('selector not found: ' + spec.selector);
+            if (!el) throw new Error('map selector not found: ' + spec.selector);
+            this._log('map element found (rect ' + el.clientWidth + 'x' + el.clientHeight + ')');
             await this._waitForTiles(el, 5000);
             const canvas = await this._withTimeout(
                 h2c(el, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false }),
                 15000,
                 'map capture ' + spec.selector
             );
+            this._log('map capture complete: ' + spec.selector + ' (' + canvas.width + 'x' + canvas.height + ')');
             return canvas.toDataURL('image/png');
         },
         async _findEchartsInstance(el) {
@@ -112,27 +153,41 @@ _CAPTURE_TEMPLATE = """
             return null;
         },
         async _captureEchart(spec) {
+            this._log('echart capture start: ' + spec.selector);
             const el = document.querySelector(spec.selector);
             if (!el) {
-                if (spec.optional) return null;
-                throw new Error('selector not found: ' + spec.selector);
+                if (spec.optional) {
+                    this._log('echart optional selector missing, skipping: ' + spec.selector);
+                    return null;
+                }
+                throw new Error('echart selector not found: ' + spec.selector);
             }
             const inst = await this._findEchartsInstance(el);
             if (!inst) {
-                if (spec.optional) return null;
+                if (spec.optional) {
+                    this._log('echart optional instance missing, skipping: ' + spec.selector);
+                    return null;
+                }
                 throw new Error('ECharts instance not found for selector: ' + spec.selector);
             }
-            return inst.getDataURL({
+            const url = inst.getDataURL({
                 pixelRatio: spec.pixel_ratio || 2,
                 backgroundColor: '#ffffff',
             });
+            this._log('echart capture complete: ' + spec.selector);
+            return url;
         },
         async _runCapture() {
-            if (this._pysepal_busy) return;
+            if (this._pysepal_busy) {
+                this._log('runCapture ignored (already busy)');
+                return;
+            }
             this._pysepal_busy = true;
+            this._log('runCapture start');
             let specs = [];
             try { specs = JSON.parse(this.capture_specs || '[]'); }
             catch (_e) { specs = []; }
+            this._log('runCapture specs: ' + specs.length);
             const results = {};
             try {
                 for (const spec of specs) {
@@ -141,8 +196,11 @@ _CAPTURE_TEMPLATE = """
                     else if (spec.kind === 'echart') url = await this._captureEchart(spec);
                     if (url) results[spec.selector] = url;
                 }
+                this._log('runCapture done, ' + Object.keys(results).length + ' images');
                 this.captured_images = results;
             } catch (e) {
+                const msg = (e && (e.stack || e.message)) || String(e);
+                this._log('runCapture error: ' + msg);
                 this.captured_images = { __error__: String(e && e.message || e) };
             } finally {
                 this._pysepal_busy = false;
@@ -151,6 +209,7 @@ _CAPTURE_TEMPLATE = """
         _triggerDownload() {
             const b64 = this.pdf_base64;
             if (!b64) return;
+            this._log('triggering download: ' + (this.filename || 'report.pdf') + ' (' + b64.length + ' b64 chars)');
             const link = document.createElement('a');
             link.href = 'data:application/pdf;base64,' + b64;
             link.download = this.filename || 'report.pdf';
@@ -171,6 +230,8 @@ class _CaptureTemplate(ipv.VuetifyTemplate):
     pdf_base64 = Unicode("").tag(sync=True)
     download_tick = Int(0).tag(sync=True)
     filename = Unicode("report.pdf").tag(sync=True)
+    log_message = Unicode("").tag(sync=True)
+    log_tick = Int(0).tag(sync=True)
     template = Unicode(_CAPTURE_TEMPLATE).tag(sync=True)
 
 
@@ -241,8 +302,21 @@ def PdfReportButton(
             new = change.get("new") or {}
             captured_state.set(dict(new))
 
+        def _on_log(_change: dict) -> None:
+            msg = capture_engine.log_message
+            if not msg:
+                return
+            # stdout so it always surfaces in `solara run` output, even if
+            # no logger handler is configured at the bundle level.
+            print(msg, flush=True)
+            log.info(msg)
+
         capture_engine.observe(_on_change, names="captured_images")
-        return lambda: capture_engine.unobserve(_on_change, names="captured_images")
+        capture_engine.observe(_on_log, names="log_tick")
+        def _cleanup():
+            capture_engine.unobserve(_on_change, names="captured_images")
+            capture_engine.unobserve(_on_log, names="log_tick")
+        return _cleanup
 
     solara.use_effect(_observe, [])
 
