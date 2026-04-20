@@ -292,21 +292,8 @@ def DelineationStep(
         )
 
         if state.hybasin_list.value:
-            with rv.ListItem(dense=True, class_="pa-0 mt-2"):
-                with rv.ListItemIcon(class_="mr-2 my-auto"):
-                    rv.Icon(small=True, color="primary", children=["mdi-waves"])
-                with rv.ListItemContent(class_="py-1"):
-                    rv.ListItemTitle(
-                        class_="caption",
-                        style_="opacity: 0.6;",
-                        children=["Upstream basins"],
-                    )
-                    rv.ListItemSubtitle(
-                        class_="body-2",
-                        children=[str(len(state.hybasin_list.value))],
-                    )
-
             rv.Select(
+                class_="mt-2",
                 v_model=state.method.value,
                 on_v_model=state.method.set,
                 items=[
@@ -327,7 +314,7 @@ def DelineationStep(
                     items=[{"text": str(h), "value": h} for h in state.hybasin_list.value],
                     label="Select basins",
                     multiple=True,
-                    chips=True,
+                    small_chips=True,
                     deletable_chips=True,
                     dense=True,
                     outlined=True,
@@ -342,4 +329,4 @@ def DelineationStep(
                 block=True,
             )
 
-            DashboardStep(state, theme_toggle, legend_visible)
+            DashboardStep(state, theme_toggle, legend_visible, legend_data)
