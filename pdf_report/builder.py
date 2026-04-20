@@ -234,7 +234,11 @@ def build_pdf_report(
         _w, h = fl.wrap(content_width_pt, 1_000_000)
         total_h += h
 
-    page_height_pt = total_h + 2 * margin_pt
+    # Flowable.wrap() returns the content box height but doesn't account for
+    # ParagraphStyle.spaceBefore/spaceAfter, Frame padding, or row gaps in
+    # Tables — the sum underestimates actual layout by ~5-15%. Add a buffer
+    # so reportlab doesn't spill the last flowable onto a second page.
+    page_height_pt = total_h * 1.18 + 2 * margin_pt + 60
     max_height_pt = _MAX_SINGLE_PAGE_HEIGHT_MM * mm
 
     buf = io.BytesIO()
