@@ -83,6 +83,8 @@ SLD_INTERVALS = _build_sld()
 
 # --- Display limits ---
 MAX_CATCH_DISPLAY = 10
+# If upstream delineation returns more than this, suggest a higher HydroSHEDS level
+BASIN_WARN_THRESHOLD = 50
 
 # --- Dashboard palette: blue / teal / cyan family (watersheds = water) ---
 CATCH_COLOR_PALETTE = [

@@ -10,7 +10,12 @@ import solara
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
 
-from apps.basin_rivers.params import GFC_LEGEND, SLD_INTERVALS
+from apps.basin_rivers.params import (
+    BASIN_WARN_THRESHOLD,
+    GFC_LEGEND,
+    MAX_CATCH_DISPLAY,
+    SLD_INTERVALS,
+)
 from apps.basin_rivers.scripts import (
     classify_gfc,
     compute_zonal_stats,
@@ -127,10 +132,15 @@ def DelineationStep(
             if legend_visible is not None:
                 legend_visible.set(True)
 
-            notifications.success(
-                f"Watershed traced: {len(result['hybas_ids'])} upstream basins"
-            )
-            logger.info("Delineation complete: %d basins", len(result["hybas_ids"]))
+            n_basins = len(result["hybas_ids"])
+            if n_basins > BASIN_WARN_THRESHOLD:
+                notifications.warning(
+                    f"Watershed has {n_basins} upstream basins — that's a lot. "
+                    f"Consider a lower HydroSHEDS level for larger (fewer) basins."
+                )
+            else:
+                notifications.success(f"Watershed traced: {n_basins} upstream basins")
+            logger.info("Delineation complete: %d basins", n_basins)
 
     solara.use_effect(
         _sync_delineation,
@@ -181,10 +191,24 @@ def DelineationStep(
                 if state.method.value == "filter" and state.selected_basins.value
                 else state.hybasin_list.value
             )
-            state.selected_hybasid_chart.value = [str(b) for b in seed_ids]
+            seed_strs = [str(b) for b in seed_ids]
+            if len(seed_strs) > MAX_CATCH_DISPLAY:
+                # Keep the top N basins by total area for the dashboard default
+                totals = (
+                    df[df["basin"].astype(str).isin(seed_strs)]
+                    .groupby("basin")["area"]
+                    .sum()
+                    .sort_values(ascending=False)
+                )
+                seed_strs = [str(b) for b in totals.head(MAX_CATCH_DISPLAY).index.tolist()]
+                notifications.info(
+                    f"Showing top {MAX_CATCH_DISPLAY} basins by area in the dashboard. "
+                    f"Adjust the Catchments selector to include more."
+                )
+            state.selected_hybasid_chart.value = seed_strs
             state.sett_timespan.value = (state.year_start.value, state.year_end.value)
 
-            notifications.success(f"Statistics computed: {len(df)} rows")
+            notifications.success("Statistics ready")
             logger.info("Statistics computed: %d rows", len(df))
 
     solara.use_effect(
