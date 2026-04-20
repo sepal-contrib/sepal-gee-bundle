@@ -24,10 +24,12 @@ import logging
 from typing import Sequence
 
 import ipyvuetify as ipv
+import ipyvuetify as v
 import reacton.ipyvuetify as rv
 import solara
 from pysepal.solara.notifications import use_notifications
 from pysepal.solara.notifications.notifier import NoopNotifier
+from reacton import ipyvue
 from traitlets import Dict, Int, Unicode
 
 from .builder import build_pdf_report
@@ -484,22 +486,36 @@ def PdfReportButton(
         building.set(True)
         capture_engine.tick = capture_engine.tick + 1
 
-    # Use rv.Btn directly to get the Vuetify `loading` prop (spinner while
-    # capture runs client-side). solara.Button doesn't expose it.
+    # Build children: a small spinner to the left of the label while capturing,
+    # plus the optional leading icon when idle. We avoid Vuetify's native
+    # `loading` prop — it hides children and reports inconsistent disabled
+    # state — and wire clicks via ipyvue.use_event (the reacton-compatible
+    # way; `rv.Btn(on_click=...)` is silently ignored).
     btn_children: list = []
-    if icon_name:
-        btn_children.append(rv.Icon(left=True, children=[icon_name]))
+    if building.value:
+        spinner_size = 14 if small else 16
+        btn_children.append(
+            v.ProgressCircular(
+                size=spinner_size,
+                width=2,
+                color="white",
+                indeterminate=True,
+                class_="mr-2",
+            )
+        )
+    elif icon_name:
+        btn_children.append(v.Icon(left=True, small=small, children=[icon_name]))
     btn_children.append(label)
-    rv.Btn(
+
+    btn = rv.Btn(
         color=color,
         block=block,
         small=small,
         disabled=building.value,
-        loading=building.value,
         class_=" ".join(classes) if classes else "",
         children=btn_children,
-        on_click=lambda *_: _start(),
     )
+    ipyvue.use_event(btn, "click", lambda *_ignore: _start())
 
     rv.Html(tag="div", children=[capture_engine], style_="display:none;")
 
