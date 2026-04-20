@@ -13,6 +13,7 @@ dependencies = [
     "starlette<1.0",
     "ee-client>=2.5.0",
     "ipecharts",
+    "reportlab>=4,<5",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +25,7 @@ dev = [
     "pytest-cov",
     "pytest-mock",
     "ruff",
+    "pypdf>=4",
 ]
 
 [tool.commitizen]
