@@ -1,5 +1,6 @@
 """Per-catchment donut for the selected variable."""
 
+import reacton.ipyvuetify as rv
 import solara
 from ipecharts import EChartsWidget
 from ipecharts.option import Legend, Option, Title, Tooltip
@@ -50,9 +51,22 @@ def CatchmentPie(state, theme_toggle):
                 radius=["25%", "70%"],
                 center=["50%", "45%"],
                 data=data,
-                label={"show": True, "formatter": "{d}%", "fontSize": 11},
+                label={
+                    "show": True,
+                    "position": "inside",
+                    "formatter": "{d}%",
+                    "fontSize": 11,
+                    "color": "#fff",
+                    "textBorderColor": "rgba(0,0,0,0.5)",
+                    "textBorderWidth": 2,
+                },
+                labelLine={"show": False},
+                minShowLabelAngle=15,
             )
         ],
     )
 
-    EChartsWidget.element(option=option, theme=theme, style={"height": "340px", "width": "100%"})
+    with rv.Html(tag="div", class_="br-echart-catchment-pie", style_="width:100%;"):
+        EChartsWidget.element(
+            option=option, theme=theme, style={"height": "340px", "width": "100%"}
+        )

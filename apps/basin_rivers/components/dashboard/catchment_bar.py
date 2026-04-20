@@ -1,5 +1,6 @@
 """Per-catchment bar chart. Three modes driven by selected_var."""
 
+import reacton.ipyvuetify as rv
 import solara
 from ipecharts import EChartsWidget
 from ipecharts.option import Grid, Legend, Option, Title, Tooltip, XAxis, YAxis
@@ -81,4 +82,7 @@ def CatchmentBar(state, theme_toggle):
             series=series,
         )
 
-    EChartsWidget.element(option=option, theme=theme, style={"height": "380px", "width": "100%"})
+    with rv.Html(tag="div", class_="br-echart-catchment-bar", style_="width:100%;"):
+        EChartsWidget.element(
+            option=option, theme=theme, style={"height": "380px", "width": "100%"}
+        )

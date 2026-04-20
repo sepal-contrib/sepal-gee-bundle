@@ -1,5 +1,6 @@
 """Spline line chart for forest loss trend per basin."""
 
+import reacton.ipyvuetify as rv
 import solara
 from ipecharts import EChartsWidget
 from ipecharts.option import Grid, Legend, Option, Title, Tooltip, XAxis, YAxis
@@ -54,4 +55,7 @@ def LossTrend(state, theme_toggle):
         series=series,
     )
 
-    EChartsWidget.element(option=option, theme=theme, style={"height": "340px", "width": "100%"})
+    with rv.Html(tag="div", class_="br-echart-loss-trend", style_="width:100%;"):
+        EChartsWidget.element(
+            option=option, theme=theme, style={"height": "340px", "width": "100%"}
+        )
