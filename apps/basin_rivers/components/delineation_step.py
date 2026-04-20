@@ -1,6 +1,7 @@
 """Upstream delineation and statistics computation."""
 
 import logging
+from dataclasses import asdict as _asdict
 from dataclasses import dataclass
 
 import ee
@@ -9,7 +10,7 @@ import solara
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
 
-from apps.basin_rivers.params import SLD_INTERVALS
+from apps.basin_rivers.params import GFC_LEGEND, SLD_INTERVALS
 from apps.basin_rivers.scripts import (
     classify_gfc,
     compute_zonal_stats,
@@ -44,7 +45,14 @@ class StatsRequest:
 
 
 @solara.component
-def DelineationStep(state, sepal_map, gee_interface, theme_toggle):
+def DelineationStep(
+    state,
+    sepal_map,
+    gee_interface,
+    theme_toggle,
+    legend_data=None,
+    legend_visible=None,
+):
     """Delineate upstream basins and compute forest change statistics."""
     notifications = use_notifications()
     delineate_cancel = solara.use_ref(None)
@@ -114,8 +122,13 @@ def DelineationStep(state, sepal_map, gee_interface, theme_toggle):
             if not gdf.empty:
                 sepal_map.zoom_bounds(gdf.total_bounds)
 
+            if legend_data is not None:
+                legend_data.set(_asdict(GFC_LEGEND))
+            if legend_visible is not None:
+                legend_visible.set(True)
+
             notifications.success(
-                f"Delineation complete: {len(result['hybas_ids'])} upstream basins"
+                f"Watershed traced: {len(result['hybas_ids'])} upstream basins"
             )
             logger.info("Delineation complete: %d basins", len(result["hybas_ids"]))
 
@@ -198,6 +211,8 @@ def DelineationStep(state, sepal_map, gee_interface, theme_toggle):
         delineate_cancel.current = None
         state.hybasin_list.value = []
         state.zonal_df.value = None
+        if legend_visible is not None:
+            legend_visible.set(False)
         delineate_task(
             DelineationRequest(
                 lat=state.lat.value,
@@ -240,7 +255,7 @@ def DelineationStep(state, sepal_map, gee_interface, theme_toggle):
     # --- UI ---
     with solara.Column():
         TaskButtonComponent(
-            label="Delineate Upstream Basins",
+            label="Trace watershed",
             **delineate_btn,
             icon="mdi-source-branch",
             external_busy=state.lat.value is None,
@@ -249,7 +264,16 @@ def DelineationStep(state, sepal_map, gee_interface, theme_toggle):
         )
 
         if state.hybasin_list.value:
-            solara.Text(f"Found {len(state.hybasin_list.value)} upstream basins")
+            rv.Chip(
+                small=True,
+                class_="mt-2",
+                color="primary",
+                text_color="white",
+                children=[
+                    rv.Icon(left=True, small=True, children=["mdi-waves"]),
+                    f"{len(state.hybasin_list.value)} upstream basins",
+                ],
+            )
 
             rv.Select(
                 v_model=state.method.value,

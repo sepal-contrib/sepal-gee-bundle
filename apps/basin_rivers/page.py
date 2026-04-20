@@ -7,6 +7,7 @@ from pysepal.logger import setup_logging
 from pysepal.mapping import SepalMap
 from pysepal.sepalwidgets.vue_app import MapApp, ThemeToggle
 from pysepal.solara import get_current_gee_interface, setup_theme_colors, with_sepal_sessions
+from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
 from .components import DelineationStep, ParamsStep, PointStep
@@ -32,6 +33,9 @@ def BasinRiversPage():
         [id(gee_interface)],
     )
 
+    legend_data = solara.use_reactive({})
+    legend_visible = solara.use_reactive(False)
+
     steps_data = []
 
     right_panel_config = {
@@ -42,7 +46,7 @@ def BasinRiversPage():
 
     right_panel_content = [
         {
-            "title": "Select Point",
+            "title": "Outlet",
             "icon": "mdi-map-marker",
             "content": [PointStep(state, sepal_map)],
         },
@@ -54,7 +58,16 @@ def BasinRiversPage():
         {
             "title": "Delineation & Stats",
             "icon": "mdi-source-branch",
-            "content": [DelineationStep(state, sepal_map, gee_interface, theme_toggle)],
+            "content": [
+                DelineationStep(
+                    state,
+                    sepal_map,
+                    gee_interface,
+                    theme_toggle,
+                    legend_data,
+                    legend_visible,
+                )
+            ],
         },
     ]
 
@@ -67,4 +80,9 @@ def BasinRiversPage():
         right_panel_content=right_panel_content,
         right_panel_open=True,
         theme_toggle=[theme_toggle],
+    )
+
+    LegendComponent(
+        legend_data=legend_data.value,
+        visible=legend_visible.value,
     )

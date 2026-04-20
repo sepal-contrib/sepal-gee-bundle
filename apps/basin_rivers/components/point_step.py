@@ -1,4 +1,4 @@
-"""Pour point selection via map click or manual coordinate entry."""
+"""Outlet point selection via map click or manual coordinate entry."""
 
 import logging
 
@@ -9,21 +9,22 @@ from pysepal.solara.notifications import use_notifications
 
 logger = logging.getLogger("sepal_gee_bundle.basin_rivers")
 
+_OUTLET_LAYER = "Outlet"
+
 
 @solara.component
 def PointStep(state, sepal_map):
-    """Select a pour point by clicking the map or entering coordinates manually."""
+    """Pick a watershed outlet by clicking the map or entering coordinates."""
     notifications = use_notifications()
     lat_text, set_lat_text = solara.use_state("")
     lon_text, set_lon_text = solara.use_state("")
 
     def _update_marker(lat, lon):
-        """Add or replace the pour point marker on the map."""
-        existing = sepal_map.find_layer("Pour Point", none_ok=True)
+        existing = sepal_map.find_layer(_OUTLET_LAYER, none_ok=True)
         if existing:
             sepal_map.remove_layer(existing)
-        marker = Marker(location=[lat, lon], draggable=False, name="Pour Point")
-        sepal_map.add_layer(marker, key="Pour Point")
+        marker = Marker(location=[lat, lon], draggable=False, name=_OUTLET_LAYER)
+        sepal_map.add_layer(marker, key=_OUTLET_LAYER)
 
     def _register_click():
         def handle(**kwargs):
@@ -34,8 +35,8 @@ def PointStep(state, sepal_map):
                 state.lat.set(lat)
                 state.lon.set(lon)
                 _update_marker(lat, lon)
-                notifications.success(f"Pour point set: {lat:.6f}, {lon:.6f}")
-                logger.debug("Pour point set via click: %s, %s", lat, lon)
+                notifications.success(f"Outlet set: {lat:.6f}, {lon:.6f}")
+                logger.debug("Outlet set via click: %s, %s", lat, lon)
 
         sepal_map.on_interaction(handle)
 
@@ -51,14 +52,15 @@ def PointStep(state, sepal_map):
         state.lat.set(lat)
         state.lon.set(lon)
         _update_marker(lat, lon)
-        notifications.success(f"Pour point set: {lat:.6f}, {lon:.6f}")
-        logger.debug("Pour point set manually: %s, %s", lat, lon)
+        notifications.success(f"Outlet set: {lat:.6f}, {lon:.6f}")
+        logger.debug("Outlet set manually: %s, %s", lat, lon)
 
     with solara.Column():
         rv.Switch(
             v_model=state.manual_coords.value,
             on_v_model=state.manual_coords.set,
             label="Manual coordinates",
+            dense=True,
         )
 
         if state.manual_coords.value:
@@ -79,14 +81,31 @@ def PointStep(state, sepal_map):
                 outlined=True,
             )
             solara.Button(
-                "Set Point",
+                "Set outlet",
                 on_click=_set_manual_point,
                 color="primary",
                 small=True,
                 block=True,
             )
         else:
-            solara.Text("Click on the map to select a pour point.")
+            rv.Alert(
+                type="info",
+                text=True,
+                dense=True,
+                border="left",
+                icon="mdi-gesture-tap",
+                children=["Click on the map to pick a watershed outlet."],
+                class_="mt-2 mb-0",
+            )
 
         if state.lat.value is not None and state.lon.value is not None:
-            solara.Text(f"Pour point: {state.lat.value:.6f}, {state.lon.value:.6f}")
+            rv.Chip(
+                color="primary",
+                text_color="white",
+                small=True,
+                class_="mt-3",
+                children=[
+                    rv.Icon(left=True, small=True, children=["mdi-crosshairs-gps"]),
+                    f"{state.lat.value:.5f}, {state.lon.value:.5f}",
+                ],
+            )

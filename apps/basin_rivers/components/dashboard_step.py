@@ -60,14 +60,8 @@ def DashboardStep(state, theme_toggle):
 
     solara.use_effect(_bump_resize, [open_dialog.value])
 
-    def _toggle_theme():
-        theme_toggle.dark = not bool(getattr(theme_toggle, "dark", False))
-
     if not has_data:
-        solara.Text("Run delineation and calculate statistics to see results.")
         return
-
-    solara.Text(f"{len(state.hybasin_list.value)} basins · {len(df)} stats rows")
 
     solara.Button(
         label="Open dashboard",
@@ -75,6 +69,7 @@ def DashboardStep(state, theme_toggle):
         on_click=lambda: open_dialog.set(True),
         color="primary",
         block=True,
+        small=True,
         classes=["mt-2"],
     )
 
@@ -89,18 +84,6 @@ def DashboardStep(state, theme_toggle):
             with rv.Toolbar(dark=True, color="primary", dense=True, flat=True):
                 rv.ToolbarTitle(children=["Basin Rivers — Dashboard"])
                 rv.Spacer()
-                solara.FileDownload(
-                    data=lambda: _csv_bytes(state.zonal_df.value),
-                    filename="basin_rivers_stats.csv",
-                    mime_type="text/csv",
-                    label="CSV",
-                )
-                solara.Button(
-                    icon_name="mdi-theme-light-dark",
-                    icon=True,
-                    on_click=_toggle_theme,
-                    color="white",
-                )
                 solara.Button(
                     icon_name="mdi-close",
                     icon=True,
@@ -116,7 +99,37 @@ def DashboardStep(state, theme_toggle):
 
 @solara.component
 def _DashboardContent(state, theme_toggle):
+    df = state.zonal_df.value
     with rv.Container(fluid=True, class_="pa-0"):
+        with rv.Row(dense=True, class_="mb-3 ml-1 mr-1", align="center"):
+            rv.Chip(
+                small=True,
+                color="primary",
+                text_color="white",
+                class_="mr-2",
+                children=[
+                    rv.Icon(left=True, small=True, children=["mdi-waves"]),
+                    f"{len(state.hybasin_list.value)} basins",
+                ],
+            )
+            rv.Chip(
+                small=True,
+                outlined=True,
+                color="primary",
+                class_="mr-2",
+                children=[
+                    rv.Icon(left=True, small=True, children=["mdi-table"]),
+                    f"{len(df)} rows",
+                ],
+            )
+            rv.Spacer()
+            solara.FileDownload(
+                data=lambda: _csv_bytes(state.zonal_df.value),
+                filename="basin_rivers_stats.csv",
+                mime_type="text/csv",
+                label="Download CSV",
+            )
+
         with rv.Row(dense=True, class_="mb-2"):
             with rv.Col(cols=12, md=5):
                 SettingsCard(state)
