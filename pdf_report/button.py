@@ -142,12 +142,25 @@ _CAPTURE_TEMPLATE = """
             if (typeof h2c !== 'function') {
                 throw new Error('html2canvas not callable after load (typeof = ' + (typeof h2c) + ')');
             }
-            const el = document.querySelector(spec.selector);
-            if (!el) throw new Error('map selector not found: ' + spec.selector);
-            this._log('map element found (rect ' + el.clientWidth + 'x' + el.clientHeight + ')');
-            await this._waitForTiles(el, 5000);
+            const wrapper = document.querySelector(spec.selector);
+            if (!wrapper) throw new Error('map selector not found: ' + spec.selector);
+            // SepalMap in fullscreen mode wraps a position:fixed .leaflet-container
+            // that's hoisted out of the wrapper's layout. The wrapper itself
+            // measures 0x0 — capture the fixed child instead.
+            let target = wrapper;
+            const leaflet = wrapper.querySelector('.leaflet-container');
+            if (leaflet && (leaflet !== wrapper)) {
+                this._log(
+                    'map: using .leaflet-container child (' +
+                    leaflet.clientWidth + 'x' + leaflet.clientHeight +
+                    ') instead of wrapper (' +
+                    wrapper.clientWidth + 'x' + wrapper.clientHeight + ')'
+                );
+                target = leaflet;
+            }
+            await this._waitForTiles(target, 5000);
             const canvas = await this._withTimeout(
-                h2c(el, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false }),
+                h2c(target, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false }),
                 15000,
                 'map capture ' + spec.selector
             );
@@ -220,8 +233,29 @@ _CAPTURE_TEMPLATE = """
                 this._log('echart capture via getDataURL: ' + spec.selector);
                 return url;
             }
-            // Instance not reachable — rasterize the container with html2canvas.
-            this._log('echart instance not found via any strategy for ' + spec.selector);
+            // No instance — grab the native <canvas> directly. This preserves
+            // ECharts' own devicePixelRatio-scaled pixel buffer, which is much
+            // sharper than re-rasterizing the container with html2canvas.
+            const canvases = el.querySelectorAll('canvas');
+            if (canvases.length > 0) {
+                // Pick the largest canvas (ECharts may render hover/zr layers too).
+                let best = canvases[0];
+                for (const c of canvases) {
+                    if (c.width * c.height > best.width * best.height) best = c;
+                }
+                try {
+                    const url = best.toDataURL('image/png');
+                    this._log(
+                        'echart capture via canvas.toDataURL (' +
+                        best.width + 'x' + best.height + '): ' + spec.selector
+                    );
+                    return url;
+                } catch (e) {
+                    this._log('canvas.toDataURL failed (' + (e && e.message) + '), falling back to html2canvas');
+                }
+            } else {
+                this._log('no <canvas> found inside ' + spec.selector + ', falling back to html2canvas');
+            }
             try {
                 const url = await this._rasterizeElement(el, 'echart rasterize ' + spec.selector);
                 this._log('echart capture via html2canvas: ' + spec.selector);

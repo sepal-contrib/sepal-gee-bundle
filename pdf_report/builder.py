@@ -37,6 +37,11 @@ from .models import (
 # Stay comfortably under that; fall back to A4 multipage beyond.
 _MAX_SINGLE_PAGE_HEIGHT_MM = 4800.0
 
+# Echart images look too big and pixelated when stretched to full content width.
+# Cap at ~65% width and 90mm height, centered. Maps still get the full width.
+_ECHART_WIDTH_FRACTION = 0.65
+_ECHART_MAX_HEIGHT_MM = 90.0
+
 
 def _styles() -> tuple[ParagraphStyle, ParagraphStyle, ParagraphStyle, ParagraphStyle]:
     base = getSampleStyleSheet()
@@ -158,7 +163,13 @@ def _flowables_for_capture(
             raise ValueError(f"Missing image bytes for echart selector {cap.selector!r}")
         if cap.label:
             out.append(Paragraph(cap.label, section_style))
-        out.append(_scaled_image(png, content_width_pt))
+        img = _scaled_image(
+            png,
+            content_width_pt * _ECHART_WIDTH_FRACTION,
+            max_height_mm=_ECHART_MAX_HEIGHT_MM,
+        )
+        img.hAlign = "CENTER"
+        out.append(img)
         out.append(Spacer(1, 6))
         return out
 
