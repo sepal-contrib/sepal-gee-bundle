@@ -39,16 +39,20 @@ def CatchmentPie(state, theme_toggle):
     ]
 
     option = Option(
-        title=Title(text=CATCH_PIE_TITLES.get(selected, ""), left="center"),
+        backgroundColor="#1e1e1e00",
+        title=Title(
+            text=CATCH_PIE_TITLES.get(selected, ""), left="center", textStyle={"fontSize": 14}
+        ),
         tooltip=Tooltip(trigger="item", formatter="Basin {b}: {c} ha ({d}%)"),
-        legend=Legend(orient="vertical", right=0, top="middle"),
+        legend=Legend(orient="horizontal", bottom=0, textStyle={"fontSize": 10}),
         series=[
             Pie(
-                radius=["50%", "70%"],
+                radius=["45%", "65%"],
+                center=["50%", "45%"],
                 data=data,
-                label={"show": True, "formatter": "{b}: {d}%"},
+                label={"show": True, "formatter": "{d}%", "fontSize": 11},
             )
         ],
     )
 
-    EChartsWidget.element(option=option, theme=theme, style={"height": "320px"})
+    EChartsWidget.element(option=option, theme=theme, style={"height": "340px", "width": "100%"})

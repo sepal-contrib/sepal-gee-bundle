@@ -40,18 +40,20 @@ def OverallPie(state, theme_toggle):
     ]
 
     option = Option(
-        title=Title(text="Overall forest change", left="center"),
+        backgroundColor="#1e1e1e00",
+        title=Title(text="Overall forest change", left="center", textStyle={"fontSize": 14}),
         tooltip=Tooltip(trigger="item", formatter="{b}: {c} ha ({d}%)"),
-        legend=Legend(orient="horizontal", bottom=0),
+        legend=Legend(orient="horizontal", bottom=0, textStyle={"fontSize": 11}),
         series=[
             Pie(
-                radius=["50%", "70%"],
+                radius=["45%", "65%"],
+                center=["50%", "45%"],
                 data=data,
-                label={"show": True, "formatter": "{b}: {d}%"},
+                label={"show": True, "formatter": "{d}%", "fontSize": 11},
                 selectedMode="single",
-                emphasis={"scale": True, "scaleSize": 10},
+                emphasis={"scale": True, "scaleSize": 8},
             )
         ],
     )
 
-    EChartsWidget.element(option=option, theme=theme, style={"height": "320px"})
+    EChartsWidget.element(option=option, theme=theme, style={"height": "340px", "width": "100%"})

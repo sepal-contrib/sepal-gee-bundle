@@ -19,6 +19,8 @@ from apps.basin_rivers.scripts import (
 )
 from apps.basin_rivers.scripts.visualization import create_basins_layer
 
+from .dashboard_step import DashboardStep
+
 logger = logging.getLogger("sepal_gee_bundle.basin_rivers")
 
 
@@ -42,7 +44,7 @@ class StatsRequest:
 
 
 @solara.component
-def DelineationStep(state, sepal_map, gee_interface):
+def DelineationStep(state, sepal_map, gee_interface, theme_toggle):
     """Delineate upstream basins and compute forest change statistics."""
     notifications = use_notifications()
     delineate_cancel = solara.use_ref(None)
@@ -67,9 +69,11 @@ def DelineationStep(state, sepal_map, gee_interface):
             )
 
             task.step("Rendering map layer...")
-            gfc_layer = f"gfc_{request.treecover}_{request.year_start}_{request.year_end}"
-            if not sepal_map.find_layer(gfc_layer, none_ok=True):
-                await sepal_map.add_ee_layer_async(gfc_image.sldStyle(SLD_INTERVALS), {}, gfc_layer)
+            gfc_layer = "GFC forest change"
+            existing = sepal_map.find_layer(gfc_layer, none_ok=True)
+            if existing:
+                sepal_map.remove_layer(existing)
+            await sepal_map.add_ee_layer_async(gfc_image.sldStyle(SLD_INTERVALS), {}, gfc_layer)
 
         return {
             "upstream_fc": upstream_fc,
@@ -81,7 +85,10 @@ def DelineationStep(state, sepal_map, gee_interface):
     def _sync_delineation():
         """Mirror task state into AppState and add non-GEE map layers."""
         state.loading.value = delineate_task.pending
-        if delineate_task.pending or delineate_task.cancelled:
+        if delineate_task.pending:
+            return
+        if delineate_task.cancelled:
+            notifications.info("Delineation cancelled.")
             return
         if delineate_task.error:
             notifications.error(f"Delineation failed: {delineate_task.exception}")
@@ -141,7 +148,10 @@ def DelineationStep(state, sepal_map, gee_interface):
         return parse_zonal_stats(raw)
 
     def _sync_stats():
-        if stats_task.pending or stats_task.cancelled:
+        if stats_task.pending:
+            return
+        if stats_task.cancelled:
+            notifications.info("Statistics cancelled.")
             return
         if stats_task.error:
             notifications.error(f"Statistics failed: {stats_task.exception}")
@@ -153,7 +163,12 @@ def DelineationStep(state, sepal_map, gee_interface):
             state.zonal_df.value = df
 
             state.selected_var.value = "all"
-            state.selected_hybasid_chart.value = [str(b) for b in state.hybasin_list.value]
+            seed_ids = (
+                state.selected_basins.value
+                if state.method.value == "filter" and state.selected_basins.value
+                else state.hybasin_list.value
+            )
+            state.selected_hybasid_chart.value = [str(b) for b in seed_ids]
             state.sett_timespan.value = (state.year_start.value, state.year_end.value)
 
             notifications.success(f"Statistics computed: {len(df)} rows")
@@ -165,9 +180,20 @@ def DelineationStep(state, sepal_map, gee_interface):
     )
 
     # --- Button handlers ---
+    def _valid_year_range() -> bool:
+        if state.year_start.value > state.year_end.value:
+            notifications.warning(
+                f"Invalid year range: start ({state.year_start.value}) is after "
+                f"end ({state.year_end.value})."
+            )
+            return False
+        return True
+
     def _start_delineation():
         if state.lat.value is None or state.lon.value is None:
             notifications.warning("Select a pour point first.")
+            return
+        if not _valid_year_range():
             return
         delineate_cancel.current = None
         state.hybasin_list.value = []
@@ -191,6 +217,8 @@ def DelineationStep(state, sepal_map, gee_interface):
         )
         if not ids:
             notifications.warning("Delineate upstream basins first.")
+            return
+        if not _valid_year_range():
             return
         stats_cancel.current = None
         state.zonal_df.value = None
@@ -231,6 +259,8 @@ def DelineationStep(state, sepal_map, gee_interface):
                     {"text": "Filter specific basins", "value": "filter"},
                 ],
                 label="Basin selection",
+                hint="Controls which basins are included in the statistics",
+                persistent_hint=True,
                 dense=True,
                 outlined=True,
             )
@@ -256,3 +286,5 @@ def DelineationStep(state, sepal_map, gee_interface):
                 small=True,
                 block=True,
             )
+
+            DashboardStep(state, theme_toggle)

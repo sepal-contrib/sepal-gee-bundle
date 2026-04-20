@@ -47,9 +47,17 @@ class TestAddCatchmentColors:
         assert a == b
 
     def test_more_basins_than_palette_cycles(self):
-        many = pd.DataFrame({"basin": [str(i) for i in range(30)], "area": [1.0] * 30})
+        from apps.basin_rivers.params import CATCH_COLOR_PALETTE
+
+        n = len(CATCH_COLOR_PALETTE) + 5
+        many = pd.DataFrame({"basin": [str(i) for i in range(n)], "area": [1.0] * n})
         out = add_catchment_colors(many)
         assert out["catch_color"].notna().all()
+        # First palette-length basins take palette[0..N-1], then wrap to palette[0]
+        sorted_basins = sorted([str(i) for i in range(n)])
+        mapping = dict(out.drop_duplicates("basin").set_index("basin")["catch_color"])
+        for i, b in enumerate(sorted_basins):
+            assert mapping[b] == CATCH_COLOR_PALETTE[i % len(CATCH_COLOR_PALETTE)]
 
 
 class TestGetOverallPieDf:

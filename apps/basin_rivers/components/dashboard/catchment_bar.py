@@ -2,7 +2,7 @@
 
 import solara
 from ipecharts import EChartsWidget
-from ipecharts.option import Legend, Option, Title, Tooltip, XAxis, YAxis
+from ipecharts.option import Grid, Legend, Option, Title, Tooltip, XAxis, YAxis
 from ipecharts.option.series import Bar
 
 from apps.basin_rivers.params import CATCH_BAR_TITLES
@@ -42,11 +42,18 @@ def CatchmentBar(state, theme_toggle):
         ]
         categories = bar_df["basin"].astype(str).tolist()
         option = Option(
-            title=Title(text=title, left="center"),
+            backgroundColor="#1e1e1e00",
+            title=Title(text=title, left="center", textStyle={"fontSize": 14}),
             tooltip=Tooltip(trigger="axis", axisPointer={"type": "shadow"}),
-            xAxis=XAxis(type="category", data=categories, name="Catchment"),
+            grid=Grid(left=50, right=20, top=50, bottom=60, containLabel=True),
+            xAxis=XAxis(
+                type="category",
+                data=categories,
+                name="Catchment",
+                axisLabel={"rotate": 30, "fontSize": 10},
+            ),
             yAxis=YAxis(type="value", name="Area (ha)"),
-            series=[Bar(data=data, label={"show": True, "position": "top"})],
+            series=[Bar(data=data, label={"show": False})],
         )
     else:
         years = sorted(bar_df["year"].unique().tolist())
@@ -64,12 +71,14 @@ def CatchmentBar(state, theme_toggle):
                 )
             )
         option = Option(
-            title=Title(text=title, left="center"),
+            backgroundColor="#1e1e1e00",
+            title=Title(text=title, left="center", textStyle={"fontSize": 14}),
             tooltip=Tooltip(trigger="axis", axisPointer={"type": "shadow"}),
-            legend=Legend(bottom=0),
+            legend=Legend(bottom=0, textStyle={"fontSize": 10}),
+            grid=Grid(left=50, right=20, top=50, bottom=60, containLabel=True),
             xAxis=XAxis(type="category", data=[str(y) for y in years], name="Year"),
             yAxis=YAxis(type="value", name="Loss (ha)"),
             series=series,
         )
 
-    EChartsWidget.element(option=option, theme=theme, style={"height": "360px"})
+    EChartsWidget.element(option=option, theme=theme, style={"height": "380px", "width": "100%"})

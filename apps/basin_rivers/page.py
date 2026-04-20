@@ -9,7 +9,7 @@ from pysepal.sepalwidgets.vue_app import MapApp, ThemeToggle
 from pysepal.solara import get_current_gee_interface, setup_theme_colors, with_sepal_sessions
 from pysepal.solara.notifications import NotificationProvider
 
-from .components import DashboardStep, DelineationStep, ParamsStep, PointStep
+from .components import DelineationStep, ParamsStep, PointStep
 from .model import BasinRiversState
 
 logger = setup_logging(logger_name="sepal_gee_bundle.basin_rivers")
@@ -54,12 +54,7 @@ def BasinRiversPage():
         {
             "title": "Delineation & Stats",
             "icon": "mdi-source-branch",
-            "content": [DelineationStep(state, sepal_map, gee_interface)],
-        },
-        {
-            "title": "Dashboard",
-            "icon": "mdi-chart-bar",
-            "content": [DashboardStep(state, theme_toggle)],
+            "content": [DelineationStep(state, sepal_map, gee_interface, theme_toggle)],
         },
     ]
 

@@ -2,7 +2,7 @@
 
 import solara
 from ipecharts import EChartsWidget
-from ipecharts.option import Legend, Option, Title, Tooltip, XAxis, YAxis
+from ipecharts.option import Grid, Legend, Option, Title, Tooltip, XAxis, YAxis
 from ipecharts.option.series import Line
 
 from apps.basin_rivers.scripts.statistics import get_loss_trend_df
@@ -44,12 +44,14 @@ def LossTrend(state, theme_toggle):
         )
 
     option = Option(
-        title=Title(text="Forest loss trend", left="center"),
+        backgroundColor="#1e1e1e00",
+        title=Title(text="Forest loss trend", left="center", textStyle={"fontSize": 14}),
         tooltip=Tooltip(trigger="axis"),
-        legend=Legend(bottom=0),
+        legend=Legend(bottom=0, textStyle={"fontSize": 10}),
+        grid=Grid(left=50, right=20, top=50, bottom=60, containLabel=True),
         xAxis=XAxis(type="category", data=[str(y) for y in years], name="Year"),
         yAxis=YAxis(type="value", name="Loss (ha)"),
         series=series,
     )
 
-    EChartsWidget.element(option=option, theme=theme, style={"height": "320px"})
+    EChartsWidget.element(option=option, theme=theme, style={"height": "340px", "width": "100%"})
