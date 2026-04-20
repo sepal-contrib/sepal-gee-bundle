@@ -8,3 +8,25 @@ the legend.
 
 Public API is re-exported here; see the submodules for implementation.
 """
+
+from .builder import build_pdf_report
+from .button import PdfReportButton
+from .models import (
+    CaptureSpec,
+    EChartCapture,
+    LegendCapture,
+    MapCapture,
+    PdfReportConfig,
+    StatsTableCapture,
+)
+
+__all__ = [
+    "CaptureSpec",
+    "EChartCapture",
+    "LegendCapture",
+    "MapCapture",
+    "PdfReportButton",
+    "PdfReportConfig",
+    "StatsTableCapture",
+    "build_pdf_report",
+]
