@@ -138,8 +138,11 @@ _CAPTURE_TEMPLATE = """
             finally { clearTimeout(to); }
         },
         _collectLeafletSvgOverlays(target) {
-            // Snapshot each SVG overlay's current rendering box and serialized
-            // XML while it's still positioned correctly via Leaflet's transform.
+            // Snapshot each SVG overlay. We keep width/height/viewBox exactly
+            // as Leaflet set them and rely on the browser's SVG rasterizer to
+            // place content correctly inside the rasterized image. Positioning
+            // on the composite canvas comes from getBoundingClientRect, which
+            // accounts for Leaflet's CSS transform.
             const targetRect = target.getBoundingClientRect();
             const overlays = [];
             const svgs = target.querySelectorAll(
@@ -149,7 +152,6 @@ _CAPTURE_TEMPLATE = """
             for (const svg of svgs) {
                 const rect = svg.getBoundingClientRect();
                 if (rect.width <= 0 || rect.height <= 0) continue;
-                // Ensure standalone SVG: inject xmlns if missing.
                 const clone = svg.cloneNode(true);
                 if (!clone.getAttribute('xmlns')) {
                     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -157,14 +159,22 @@ _CAPTURE_TEMPLATE = """
                 if (!clone.getAttribute('xmlns:xlink')) {
                     clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
                 }
-                // Force an explicit width/height matching the bounding box so the
-                // Image element rasterizes at the right pixel size.
-                clone.setAttribute('width', String(rect.width));
-                clone.setAttribute('height', String(rect.height));
-                // Drop the CSS transform on the clone — we position via canvas draw.
+                // The CSS transform is the browser's way of positioning the
+                // live element — standalone SVG has no CSS context so we drop
+                // it on the clone. We position via drawImage instead.
                 clone.style.transform = 'none';
-                clone.style.left = '0';
-                clone.style.top = '0';
+                clone.style.left = '';
+                clone.style.top = '';
+                clone.style.position = '';
+                const origW = svg.getAttribute('width');
+                const origH = svg.getAttribute('height');
+                const viewBox = svg.getAttribute('viewBox');
+                this._log(
+                    'overlay found: attr=' + (origW || '?') + 'x' + (origH || '?') +
+                    ' viewBox=[' + (viewBox || 'none') + ']' +
+                    ' rect=(' + rect.left.toFixed(1) + ',' + rect.top.toFixed(1) + ',' +
+                    rect.width.toFixed(1) + 'x' + rect.height.toFixed(1) + ')'
+                );
                 overlays.push({
                     el: svg,
                     xml: serializer.serializeToString(clone),
@@ -172,6 +182,9 @@ _CAPTURE_TEMPLATE = """
                     y: rect.top - targetRect.top,
                     width: rect.width,
                     height: rect.height,
+                    origW,
+                    origH,
+                    viewBox,
                 });
             }
             return overlays;
@@ -236,6 +249,17 @@ _CAPTURE_TEMPLATE = """
             }
             this._log('map tiles captured (' + mapCanvas.width + 'x' + mapCanvas.height + ')');
 
+            // Compute the real canvas scale rather than trust our `scale` arg:
+            // html2canvas may apply additional DPR multipliers.
+            const targetRectForScale = target.getBoundingClientRect();
+            const actualScaleX = mapCanvas.width / Math.max(targetRectForScale.width, 1);
+            const actualScaleY = mapCanvas.height / Math.max(targetRectForScale.height, 1);
+            this._log(
+                'canvas=' + mapCanvas.width + 'x' + mapCanvas.height +
+                ' target=' + targetRectForScale.width.toFixed(1) + 'x' + targetRectForScale.height.toFixed(1) +
+                ' actualScale=' + actualScaleX.toFixed(3) + 'x' + actualScaleY.toFixed(3)
+            );
+
             // Composite each SVG overlay onto the captured canvas.
             if (overlays.length > 0) {
                 const ctx = mapCanvas.getContext('2d');
@@ -247,13 +271,16 @@ _CAPTURE_TEMPLATE = """
                 );
                 for (const r of rasters) {
                     if (!r) continue;
-                    ctx.drawImage(
-                        r.img,
-                        r.overlay.x * scale,
-                        r.overlay.y * scale,
-                        r.overlay.width * scale,
-                        r.overlay.height * scale
+                    const dx = r.overlay.x * actualScaleX;
+                    const dy = r.overlay.y * actualScaleY;
+                    const dw = r.overlay.width * actualScaleX;
+                    const dh = r.overlay.height * actualScaleY;
+                    this._log(
+                        'compositing overlay: natural=' + r.img.naturalWidth + 'x' + r.img.naturalHeight +
+                        ' at (' + dx.toFixed(1) + ',' + dy.toFixed(1) + ') size ' +
+                        dw.toFixed(1) + 'x' + dh.toFixed(1)
                     );
+                    ctx.drawImage(r.img, dx, dy, dw, dh);
                 }
                 this._log('composited ' + rasters.filter(Boolean).length + ' overlay(s) onto map canvas');
             }
