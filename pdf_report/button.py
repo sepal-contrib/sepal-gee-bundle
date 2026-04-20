@@ -39,7 +39,7 @@ from .models import (
     PdfReportConfig,
 )
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("sepalui.pdf_report")
 
 _HTML2CANVAS_URL = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
 
