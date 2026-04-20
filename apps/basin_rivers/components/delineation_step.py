@@ -329,4 +329,4 @@ def DelineationStep(
                 block=True,
             )
 
-            DashboardStep(state, theme_toggle, legend_visible, legend_data)
+            DashboardStep(state, theme_toggle, legend_visible, legend_data, sepal_map)

@@ -168,3 +168,33 @@ whatever `solara` is on PATH — if the conda env isn't active you'll see
 `~/1_modules/basin-rivers/` — original sepal_ui / plotly implementation. Useful
 for algorithmic questions and the class-code translation table
 (`component/parameter/app.py`). Don't copy UI code.
+
+## PDF export
+
+The dashboard modal's **Download PDF** button calls
+`pdf_report.PdfReportButton`. It captures the live
+map (via html2canvas) and each ECharts chart (via the native
+`getDataURL()`), re-draws the legend natively in reportlab, and hands the
+browser a PDF download.
+
+The package lives in this repo at `/pdf_report/` and is expected to be
+promoted into pysepal once it's been field-tested.
+
+### Smoke test
+
+1. Start the app (`conda run -n sepal-gee-bundle solara run app.py --port 8767`).
+2. Pick an outlet, trace watershed, compute stats, open dashboard.
+3. Click **Download PDF**.
+4. Open the PDF and verify:
+   - Title, metadata block, map image with layers + marker, native legend,
+     summary table, all four charts (three if loss-trend is hidden),
+     footer with SEPAL + UTC timestamp.
+   - Legend text is crisp (vector) under PDF zoom.
+
+### Trap: capture selectors
+
+The capture spec uses CSS selectors — `.br-echart-overall`, etc. — that
+correspond to the `class_` on each chart's wrapper `rv.Html` div. If you
+rename a chart wrapper class, update the corresponding `EChartCapture` in
+`dashboard_step.py`. The map selector uses `sepal_map._id`, which is set
+automatically by `SepalMap.__init__`.

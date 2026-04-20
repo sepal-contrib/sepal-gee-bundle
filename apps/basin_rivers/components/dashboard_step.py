@@ -7,6 +7,15 @@ import reacton.ipyvuetify as rv
 import solara
 from traitlets import Int, Unicode
 
+from pdf_report import (
+    EChartCapture,
+    LegendCapture,
+    MapCapture,
+    PdfReportButton,
+    PdfReportConfig,
+    StatsTableCapture,
+)
+
 from .dashboard import CatchmentBar, CatchmentPie, LossTrend, OverallPie, SettingsCard
 
 
@@ -46,7 +55,7 @@ def _csv_bytes(df) -> bytes:
 
 
 @solara.component
-def DashboardStep(state, theme_toggle, legend_visible=None, legend_data=None):
+def DashboardStep(state, theme_toggle, legend_visible=None, legend_data=None, sepal_map=None):
     open_dialog = solara.use_reactive(False)
     resizer = solara.use_memo(lambda: _DialogResizer(), [])
 
@@ -104,7 +113,7 @@ def DashboardStep(state, theme_toggle, legend_visible=None, legend_data=None):
             with rv.CardText(class_="pa-4"):
                 # Mount the resizer inside the dialog so it lives in the DOM.
                 rv.Html(tag="div", children=[resizer], style_="display:none;")
-                _DashboardContent(state, theme_toggle, legend_data)
+                _DashboardContent(state, theme_toggle, legend_data, sepal_map)
 
 
 def _fmt_area(ha: float) -> str:
@@ -132,7 +141,7 @@ def _StatItem(icon: str, label: str, value: str):
 
 
 @solara.component
-def _DashboardContent(state, theme_toggle, legend_data=None):
+def _DashboardContent(state, theme_toggle, legend_data=None, sepal_map=None):
     df = state.zonal_df.value
     has_rows = df is not None and not df.empty
     n_basins = int(df["basin"].nunique()) if has_rows else 0
@@ -187,3 +196,76 @@ def _DashboardContent(state, theme_toggle, legend_data=None):
                     mime_type="text/csv",
                     label="Download CSV",
                 )
+            with rv.Col(cols="auto"):
+                if sepal_map is not None:
+                    _outlet_str = (
+                        f"{state.lat.value:.4f}, {state.lon.value:.4f}"
+                        if state.lat.value is not None and state.lon.value is not None
+                        else "—"
+                    )
+                    PdfReportButton(
+                        filename="basin_rivers_report.pdf",
+                        config=PdfReportConfig(
+                            title="Basin Rivers — Watershed Report",
+                            subtitle="Upstream delineation & forest change",
+                            metadata=(
+                                ("Outlet", _outlet_str),
+                                ("HydroSHEDS level", str(state.level.value)),
+                                (
+                                    "Year range",
+                                    f"{state.year_start.value}-{state.year_end.value}",
+                                ),
+                                ("Tree cover threshold", f"{state.treecover.value}%"),
+                                ("Upstream basins", str(n_basins)),
+                                ("Watershed area", _fmt_area(total_area)),
+                                (
+                                    "Stable forest",
+                                    f"{_fmt_area(forest_area)} ({forest_pct:.1f}%)",
+                                ),
+                                (
+                                    "Forest loss",
+                                    f"{_fmt_area(loss_area)} ({loss_pct:.1f}%)",
+                                ),
+                            ),
+                        ),
+                        captures=(
+                            MapCapture(selector=f".{sepal_map._id}", label="Map view"),
+                            LegendCapture(
+                                legend_data=(
+                                    legend_data.value if legend_data is not None else {}
+                                ),
+                                title="Legend",
+                            ),
+                            StatsTableCapture(
+                                title="Summary",
+                                rows=(
+                                    (
+                                        "Stable forest",
+                                        f"{_fmt_area(forest_area)} ({forest_pct:.1f}%)",
+                                    ),
+                                    (
+                                        "Forest loss",
+                                        f"{_fmt_area(loss_area)} ({loss_pct:.1f}%)",
+                                    ),
+                                ),
+                            ),
+                            EChartCapture(
+                                selector=".br-echart-overall",
+                                label="Forest composition",
+                            ),
+                            EChartCapture(
+                                selector=".br-echart-catchment-pie",
+                                label="Per-catchment share",
+                            ),
+                            EChartCapture(
+                                selector=".br-echart-catchment-bar",
+                                label="Per-catchment breakdown",
+                            ),
+                            EChartCapture(
+                                selector=".br-echart-loss-trend",
+                                label="Loss over time",
+                                optional=True,
+                            ),
+                        ),
+                        label="Download PDF",
+                    )
