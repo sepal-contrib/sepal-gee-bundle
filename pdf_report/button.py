@@ -137,44 +137,57 @@ _CAPTURE_TEMPLATE = """
             try { return await Promise.race([p, timeout]); }
             finally { clearTimeout(to); }
         },
-        _normalizeLeafletSvgTransforms(root) {
-            // html2canvas mis-renders CSS transforms on SVG elements. Leaflet
-            // positions vector overlays (paths, polygons) via translate3d on
-            // the SVG inside .leaflet-overlay-pane, so those overlays snap to
-            // 0,0 in the captured image. Replace the transform with equivalent
-            // left/top positioning for the duration of capture.
-            const saved = [];
-            const svgs = root.querySelectorAll(
+        _collectLeafletSvgOverlays(target) {
+            // Snapshot each SVG overlay's current rendering box and serialized
+            // XML while it's still positioned correctly via Leaflet's transform.
+            const targetRect = target.getBoundingClientRect();
+            const overlays = [];
+            const svgs = target.querySelectorAll(
                 '.leaflet-overlay-pane svg, .leaflet-shadow-pane svg'
             );
-            for (const el of svgs) {
-                if (!el.style) continue;
-                const computed = window.getComputedStyle(el);
-                const t = computed.transform;
-                if (!t || t === 'none') continue;
-                const rect = el.getBoundingClientRect();
-                const parentRect = el.parentElement.getBoundingClientRect();
-                saved.push({
-                    el,
-                    transform: el.style.transform,
-                    left: el.style.left,
-                    top: el.style.top,
-                    position: el.style.position,
+            const serializer = new XMLSerializer();
+            for (const svg of svgs) {
+                const rect = svg.getBoundingClientRect();
+                if (rect.width <= 0 || rect.height <= 0) continue;
+                // Ensure standalone SVG: inject xmlns if missing.
+                const clone = svg.cloneNode(true);
+                if (!clone.getAttribute('xmlns')) {
+                    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                }
+                if (!clone.getAttribute('xmlns:xlink')) {
+                    clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+                }
+                // Force an explicit width/height matching the bounding box so the
+                // Image element rasterizes at the right pixel size.
+                clone.setAttribute('width', String(rect.width));
+                clone.setAttribute('height', String(rect.height));
+                // Drop the CSS transform on the clone — we position via canvas draw.
+                clone.style.transform = 'none';
+                clone.style.left = '0';
+                clone.style.top = '0';
+                overlays.push({
+                    el: svg,
+                    xml: serializer.serializeToString(clone),
+                    x: rect.left - targetRect.left,
+                    y: rect.top - targetRect.top,
+                    width: rect.width,
+                    height: rect.height,
                 });
-                el.style.transform = 'none';
-                el.style.position = 'absolute';
-                el.style.left = (rect.left - parentRect.left) + 'px';
-                el.style.top = (rect.top - parentRect.top) + 'px';
             }
-            return saved;
+            return overlays;
         },
-        _restoreLeafletSvgTransforms(saved) {
-            for (const s of saved) {
-                s.el.style.transform = s.transform;
-                s.el.style.left = s.left;
-                s.el.style.top = s.top;
-                s.el.style.position = s.position;
-            }
+        _rasterizeSvgOverlay(overlay, scale) {
+            return new Promise((resolve, reject) => {
+                const dataUrl = 'data:image/svg+xml;charset=utf-8,' +
+                    encodeURIComponent(overlay.xml);
+                const img = new Image();
+                img.decoding = 'sync';
+                img.onload = () => resolve({ overlay, img });
+                img.onerror = (e) => reject(new Error(
+                    'svg overlay rasterize failed: ' + (e && e.message || 'load error')
+                ));
+                img.src = dataUrl;
+            });
         },
         async _captureMap(spec) {
             this._log('map capture start: ' + spec.selector);
@@ -199,21 +212,54 @@ _CAPTURE_TEMPLATE = """
                 target = leaflet;
             }
             await this._waitForTiles(target, 5000);
-            const savedSvg = this._normalizeLeafletSvgTransforms(target);
-            if (savedSvg.length > 0) {
-                this._log('normalized ' + savedSvg.length + ' leaflet SVG transform(s) for capture');
-            }
+
+            // Collect SVG overlays BEFORE hiding them (getBoundingClientRect
+            // needs them visible). Then hide during html2canvas to avoid its
+            // SVG-transform mis-rendering bug. Re-draw them onto the captured
+            // canvas ourselves using native Image + drawImage — this uses the
+            // browser's own SVG rasterizer, which honors transforms correctly.
+            const overlays = this._collectLeafletSvgOverlays(target);
+            this._log('collected ' + overlays.length + ' leaflet SVG overlay(s)');
+            const savedDisplay = overlays.map(o => ({ el: o.el, display: o.el.style.display }));
+            for (const s of savedDisplay) s.el.style.display = 'none';
+
+            const scale = 2;
+            let mapCanvas;
             try {
-                const canvas = await this._withTimeout(
-                    h2c(target, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false }),
+                mapCanvas = await this._withTimeout(
+                    h2c(target, { useCORS: true, backgroundColor: '#ffffff', scale, logging: false }),
                     15000,
                     'map capture ' + spec.selector
                 );
-                this._log('map capture complete: ' + spec.selector + ' (' + canvas.width + 'x' + canvas.height + ')');
-                return canvas.toDataURL('image/png');
             } finally {
-                this._restoreLeafletSvgTransforms(savedSvg);
+                for (const s of savedDisplay) s.el.style.display = s.display;
             }
+            this._log('map tiles captured (' + mapCanvas.width + 'x' + mapCanvas.height + ')');
+
+            // Composite each SVG overlay onto the captured canvas.
+            if (overlays.length > 0) {
+                const ctx = mapCanvas.getContext('2d');
+                const rasters = await Promise.all(
+                    overlays.map(o => this._rasterizeSvgOverlay(o, scale).catch(err => {
+                        this._log('overlay rasterize failed, skipping: ' + err.message);
+                        return null;
+                    }))
+                );
+                for (const r of rasters) {
+                    if (!r) continue;
+                    ctx.drawImage(
+                        r.img,
+                        r.overlay.x * scale,
+                        r.overlay.y * scale,
+                        r.overlay.width * scale,
+                        r.overlay.height * scale
+                    );
+                }
+                this._log('composited ' + rasters.filter(Boolean).length + ' overlay(s) onto map canvas');
+            }
+
+            this._log('map capture complete: ' + spec.selector + ' (' + mapCanvas.width + 'x' + mapCanvas.height + ')');
+            return mapCanvas.toDataURL('image/png');
         },
         _findEchartsInstanceSync(root) {
             // Try multiple strategies:
