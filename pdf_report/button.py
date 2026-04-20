@@ -70,29 +70,46 @@ _CAPTURE_TEMPLATE = """
                 self._log('html2canvas load already in-flight');
                 return window.__pysepal_h2c_promise__;
             }
-            self._log('injecting html2canvas script from __H2C_URL__');
-            window.__pysepal_h2c_promise__ = new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = '__H2C_URL__';
-                s.crossOrigin = 'anonymous';
-                s.onload = () => {
-                    const t = typeof window.html2canvas;
-                    self._log('html2canvas script onload fired; typeof window.html2canvas = ' + t);
-                    if (t === 'function') {
-                        resolve(window.html2canvas);
-                    } else {
-                        reject(new Error(
-                            'html2canvas script loaded but window.html2canvas is ' + t +
-                            ' (CSP, ad-blocker, or CDN mismatch?)'
-                        ));
-                    }
-                };
-                s.onerror = (ev) => {
-                    self._log('html2canvas script onerror fired');
-                    reject(new Error('failed to load html2canvas from CDN'));
-                };
-                document.head.appendChild(s);
-            });
+            // We run inside jupyter-vue, which provides RequireJS / AMD.
+            // html2canvas is UMD and registers as an AMD module when define.amd
+            // is present, so a plain <script src=...> never attaches it to
+            // window.html2canvas. We fetch the source as text and execute it
+            // with `define` temporarily shadowed, forcing the UMD fallback
+            // that sets root.html2canvas.
+            self._log('fetching html2canvas source from __H2C_URL__');
+            window.__pysepal_h2c_promise__ = (async () => {
+                let response;
+                try {
+                    response = await fetch('__H2C_URL__', { credentials: 'omit' });
+                } catch (e) {
+                    throw new Error('html2canvas fetch failed: ' + (e && e.message || e));
+                }
+                if (!response.ok) {
+                    throw new Error('html2canvas fetch HTTP ' + response.status);
+                }
+                const source = await response.text();
+                self._log('html2canvas source fetched (' + source.length + ' bytes); executing with AMD disabled');
+                const savedDefine = window.define;
+                const savedExports = window.exports;
+                const savedModule = window.module;
+                try {
+                    // Hide AMD + CommonJS so UMD falls through to window.html2canvas.
+                    window.define = undefined;
+                    window.exports = undefined;
+                    window.module = undefined;
+                    (new Function(source)).call(window);
+                } finally {
+                    window.define = savedDefine;
+                    window.exports = savedExports;
+                    window.module = savedModule;
+                }
+                const t = typeof window.html2canvas;
+                self._log('html2canvas executed; typeof window.html2canvas = ' + t);
+                if (t !== 'function') {
+                    throw new Error('html2canvas failed to register on window (typeof = ' + t + ')');
+                }
+                return window.html2canvas;
+            })();
             return window.__pysepal_h2c_promise__;
         },
         async _waitForTiles(root, timeoutMs) {
