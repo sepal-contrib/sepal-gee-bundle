@@ -190,12 +190,16 @@ def _DashboardContent(state, theme_toggle, legend_data=None, sepal_map=None):
 
         with rv.Row(dense=True, class_="mt-3", justify="end"):
             with rv.Col(cols="auto"):
-                solara.FileDownload(
+                with solara.FileDownload(
                     data=lambda: _csv_bytes(state.zonal_df.value),
                     filename="basin_rivers_stats.csv",
                     mime_type="text/csv",
-                    label="Download CSV",
-                )
+                ):
+                    solara.Button(
+                        label="Download CSV",
+                        color="primary",
+                        small=True,
+                    )
             with rv.Col(cols="auto"):
                 if sepal_map is not None:
                     _outlet_str = (
@@ -260,12 +264,15 @@ def _DashboardContent(state, theme_toggle, legend_data=None, sepal_map=None):
                             EChartCapture(
                                 selector=".br-echart-catchment-bar",
                                 label="Per-catchment breakdown",
+                                width_fraction=1.0,
                             ),
                             EChartCapture(
                                 selector=".br-echart-loss-trend",
                                 label="Loss over time",
                                 optional=True,
+                                width_fraction=1.0,
                             ),
                         ),
                         label="Download PDF",
+                        icon_name="",
                     )

@@ -2,7 +2,6 @@
 
 import io
 
-import pytest
 from reportlab.pdfgen import canvas as rl_canvas
 
 from pdf_report.legend import (

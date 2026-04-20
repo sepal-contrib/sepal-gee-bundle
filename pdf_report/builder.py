@@ -37,10 +37,11 @@ from .models import (
 # Stay comfortably under that; fall back to A4 multipage beyond.
 _MAX_SINGLE_PAGE_HEIGHT_MM = 4800.0
 
-# Echart images look too big and pixelated when stretched to full content width.
-# Cap at ~65% width and 90mm height, centered. Maps still get the full width.
-_ECHART_WIDTH_FRACTION = 0.65
-_ECHART_MAX_HEIGHT_MM = 90.0
+# Default echart image sizing. Pies/donuts look best around 0.65; bar/line
+# charts benefit from full-width (1.0). EChartCapture.width_fraction overrides
+# per capture.
+_ECHART_WIDTH_FRACTION = 0.70
+_ECHART_MAX_HEIGHT_MM = 110.0
 
 
 def _styles() -> tuple[ParagraphStyle, ParagraphStyle, ParagraphStyle, ParagraphStyle]:
@@ -163,9 +164,12 @@ def _flowables_for_capture(
             raise ValueError(f"Missing image bytes for echart selector {cap.selector!r}")
         if cap.label:
             out.append(Paragraph(cap.label, section_style))
+        fraction = (
+            cap.width_fraction if cap.width_fraction is not None else _ECHART_WIDTH_FRACTION
+        )
         img = _scaled_image(
             png,
-            content_width_pt * _ECHART_WIDTH_FRACTION,
+            content_width_pt * fraction,
             max_height_mm=_ECHART_MAX_HEIGHT_MM,
         )
         img.hAlign = "CENTER"
@@ -198,7 +202,6 @@ def build_pdf_report(
     Pure function. No Solara, no browser. Takes image bytes keyed by the
     selectors declared on the capture specs.
     """
-
     title_style, subtitle_style, section_style, footer_style = _styles()
 
     page_width_pt = config.page_width_mm * mm

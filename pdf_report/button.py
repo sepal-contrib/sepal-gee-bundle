@@ -26,10 +26,9 @@ from typing import Sequence
 import ipyvuetify as ipv
 import reacton.ipyvuetify as rv
 import solara
-from traitlets import Dict, Int, Unicode
-
 from pysepal.solara.notifications import use_notifications
 from pysepal.solara.notifications.notifier import NoopNotifier
+from traitlets import Dict, Int, Unicode
 
 from .builder import build_pdf_report
 from .models import (
@@ -136,6 +135,45 @@ _CAPTURE_TEMPLATE = """
             try { return await Promise.race([p, timeout]); }
             finally { clearTimeout(to); }
         },
+        _normalizeLeafletSvgTransforms(root) {
+            // html2canvas mis-renders CSS transforms on SVG elements. Leaflet
+            // positions vector overlays (paths, polygons) via translate3d on
+            // the SVG inside .leaflet-overlay-pane, so those overlays snap to
+            // 0,0 in the captured image. Replace the transform with equivalent
+            // left/top positioning for the duration of capture.
+            const saved = [];
+            const svgs = root.querySelectorAll(
+                '.leaflet-overlay-pane svg, .leaflet-shadow-pane svg'
+            );
+            for (const el of svgs) {
+                if (!el.style) continue;
+                const computed = window.getComputedStyle(el);
+                const t = computed.transform;
+                if (!t || t === 'none') continue;
+                const rect = el.getBoundingClientRect();
+                const parentRect = el.parentElement.getBoundingClientRect();
+                saved.push({
+                    el,
+                    transform: el.style.transform,
+                    left: el.style.left,
+                    top: el.style.top,
+                    position: el.style.position,
+                });
+                el.style.transform = 'none';
+                el.style.position = 'absolute';
+                el.style.left = (rect.left - parentRect.left) + 'px';
+                el.style.top = (rect.top - parentRect.top) + 'px';
+            }
+            return saved;
+        },
+        _restoreLeafletSvgTransforms(saved) {
+            for (const s of saved) {
+                s.el.style.transform = s.transform;
+                s.el.style.left = s.left;
+                s.el.style.top = s.top;
+                s.el.style.position = s.position;
+            }
+        },
         async _captureMap(spec) {
             this._log('map capture start: ' + spec.selector);
             const h2c = await this._loadHtml2Canvas();
@@ -159,13 +197,21 @@ _CAPTURE_TEMPLATE = """
                 target = leaflet;
             }
             await this._waitForTiles(target, 5000);
-            const canvas = await this._withTimeout(
-                h2c(target, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false }),
-                15000,
-                'map capture ' + spec.selector
-            );
-            this._log('map capture complete: ' + spec.selector + ' (' + canvas.width + 'x' + canvas.height + ')');
-            return canvas.toDataURL('image/png');
+            const savedSvg = this._normalizeLeafletSvgTransforms(target);
+            if (savedSvg.length > 0) {
+                this._log('normalized ' + savedSvg.length + ' leaflet SVG transform(s) for capture');
+            }
+            try {
+                const canvas = await this._withTimeout(
+                    h2c(target, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false }),
+                    15000,
+                    'map capture ' + spec.selector
+                );
+                this._log('map capture complete: ' + spec.selector + ' (' + canvas.width + 'x' + canvas.height + ')');
+                return canvas.toDataURL('image/png');
+            } finally {
+                this._restoreLeafletSvgTransforms(savedSvg);
+            }
         },
         _findEchartsInstanceSync(root) {
             // Try multiple strategies:
@@ -371,7 +417,6 @@ def PdfReportButton(
     classes: Sequence[str] = (),
 ) -> None:
     """Render a button that captures map+charts and downloads a PDF."""
-
     building = solara.use_reactive(False)
     captured_state = solara.use_reactive({})
     captures_list = list(captures)
@@ -423,7 +468,7 @@ def PdfReportButton(
             pdf_bytes = build_pdf_report(config, captures_list, image_bytes)
             capture_engine.pdf_base64 = base64.b64encode(pdf_bytes).decode("ascii")
             capture_engine.download_tick = capture_engine.download_tick + 1
-        except Exception as exc:  # noqa: BLE001 - user-facing error surface
+        except Exception as exc:
             log.exception("PDF build failed")
             _notify_error(f"PDF build failed: {exc}")
         finally:
@@ -439,15 +484,21 @@ def PdfReportButton(
         building.set(True)
         capture_engine.tick = capture_engine.tick + 1
 
-    solara.Button(
-        label=label,
-        icon_name=icon_name,
-        on_click=_start,
+    # Use rv.Btn directly to get the Vuetify `loading` prop (spinner while
+    # capture runs client-side). solara.Button doesn't expose it.
+    btn_children: list = []
+    if icon_name:
+        btn_children.append(rv.Icon(left=True, children=[icon_name]))
+    btn_children.append(label)
+    rv.Btn(
         color=color,
         block=block,
         small=small,
         disabled=building.value,
-        classes=list(classes),
+        loading=building.value,
+        class_=" ".join(classes) if classes else "",
+        children=btn_children,
+        on_click=lambda *_: _start(),
     )
 
     rv.Html(tag="div", children=[capture_engine], style_="display:none;")

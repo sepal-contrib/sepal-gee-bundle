@@ -52,6 +52,18 @@ class TestEChartCapture:
         with pytest.raises(ValueError, match="pixel_ratio"):
             EChartCapture(selector=".c", pixel_ratio=0)
 
+    def test_width_fraction_default_none(self):
+        assert EChartCapture(selector=".c").width_fraction is None
+
+    def test_width_fraction_full(self):
+        assert EChartCapture(selector=".c", width_fraction=1.0).width_fraction == 1.0
+
+    def test_width_fraction_out_of_range(self):
+        with pytest.raises(ValueError, match="width_fraction"):
+            EChartCapture(selector=".c", width_fraction=0.0)
+        with pytest.raises(ValueError, match="width_fraction"):
+            EChartCapture(selector=".c", width_fraction=1.5)
+
 
 class TestLegendCapture:
     def test_construct(self):
