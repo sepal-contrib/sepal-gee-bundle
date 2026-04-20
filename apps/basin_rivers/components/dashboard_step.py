@@ -99,29 +99,22 @@ def DashboardStep(state, theme_toggle):
 
 @solara.component
 def _DashboardContent(state, theme_toggle):
-    df = state.zonal_df.value
     with rv.Container(fluid=True, class_="pa-0"):
         with rv.Row(dense=True, class_="mb-3 ml-1 mr-1", align="center"):
-            rv.Chip(
-                small=True,
-                color="primary",
-                text_color="white",
-                class_="mr-2",
-                children=[
-                    rv.Icon(left=True, small=True, children=["mdi-waves"]),
-                    f"{len(state.hybasin_list.value)} basins",
-                ],
-            )
-            rv.Chip(
-                small=True,
-                outlined=True,
-                color="primary",
-                class_="mr-2",
-                children=[
-                    rv.Icon(left=True, small=True, children=["mdi-table"]),
-                    f"{len(df)} rows",
-                ],
-            )
+            with rv.Col(cols="auto", class_="pa-0"):
+                with rv.ListItem(dense=True, class_="pa-0"):
+                    with rv.ListItemIcon(class_="mr-2 my-auto"):
+                        rv.Icon(small=True, color="primary", children=["mdi-waves"])
+                    with rv.ListItemContent(class_="py-1"):
+                        rv.ListItemTitle(
+                            class_="caption",
+                            style_="opacity: 0.6;",
+                            children=["Upstream basins"],
+                        )
+                        rv.ListItemSubtitle(
+                            class_="body-2",
+                            children=[str(len(state.hybasin_list.value))],
+                        )
             rv.Spacer()
             solara.FileDownload(
                 data=lambda: _csv_bytes(state.zonal_df.value),

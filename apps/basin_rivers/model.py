@@ -1,19 +1,24 @@
 import solara
 
+from apps.basin_rivers.params import GFC_MAX_YEAR
+
+_DEFAULT_YEAR_START = 2010
+_DEFAULT_YEAR_END = 2000 + GFC_MAX_YEAR
+
 
 class BasinRiversState:
     """Reactive state for Upstream Watershed & Forest Stats."""
 
     def __init__(self):
-        # --- Pour point ---
+        # --- Outlet ---
         self.lat = solara.reactive(None)
         self.lon = solara.reactive(None)
         self.manual_coords = solara.reactive(False)
 
         # --- Basin parameters ---
         self.level = solara.reactive(8)
-        self.year_start = solara.reactive(2010)
-        self.year_end = solara.reactive(2020)
+        self.year_start = solara.reactive(_DEFAULT_YEAR_START)
+        self.year_end = solara.reactive(_DEFAULT_YEAR_END)
         self.treecover = solara.reactive(80)
 
         # --- Delineation results ---
@@ -34,4 +39,4 @@ class BasinRiversState:
         # --- Dashboard state ---
         self.selected_var = solara.reactive("all")
         self.selected_hybasid_chart = solara.reactive([])
-        self.sett_timespan = solara.reactive((2010, 2020))
+        self.sett_timespan = solara.reactive((_DEFAULT_YEAR_START, _DEFAULT_YEAR_END))

@@ -3,13 +3,19 @@
 import reacton.ipyvuetify as rv
 import solara
 
-from apps.basin_rivers.params import GFC_MAX_YEAR, VARIABLE_LABELS
+from apps.basin_rivers.params import VARIABLE_LABELS
 
 
 @solara.component
 def SettingsCard(state):
     """Controls for selected_var, sett_timespan, selected_hybasid_chart."""
     basins = state.hybasin_list.value
+    year_min = state.year_start.value
+    year_max = state.year_end.value
+    current = state.sett_timespan.value
+    # Clamp current value to the analysed range in case the user's earlier
+    # selection falls outside it (e.g. after re-running with a tighter range).
+    clamped = (max(year_min, current[0]), min(year_max, current[1]))
 
     with rv.Card(flat=True, class_="pa-3"):
         with rv.CardTitle():
@@ -25,19 +31,23 @@ def SettingsCard(state):
                 outlined=True,
             )
 
-            solara.Text("Timespan")
-            year_min = 2001
-            year_max = 2000 + GFC_MAX_YEAR
-            rv.RangeSlider(
-                v_model=list(state.sett_timespan.value),
-                on_v_model=lambda v: state.sett_timespan.set(tuple(v)),
-                min=year_min,
-                max=year_max,
-                step=1,
-                thumb_label="always",
-                dense=True,
-                class_="mt-6",
-            )
+            solara.Text(f"Timespan ({year_min}-{year_max})")
+            if year_max > year_min:
+                rv.RangeSlider(
+                    v_model=list(clamped),
+                    on_v_model=lambda v: state.sett_timespan.set(tuple(v)),
+                    min=year_min,
+                    max=year_max,
+                    step=1,
+                    thumb_label="always",
+                    dense=True,
+                    class_="mt-6",
+                )
+            else:
+                solara.Text(
+                    f"Single-year analysis: {year_min}",
+                    style={"opacity": "0.6"},
+                )
 
             rv.Select(
                 v_model=list(state.selected_hybasid_chart.value),

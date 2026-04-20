@@ -63,6 +63,8 @@ def PointStep(state, sepal_map):
             dense=True,
         )
 
+        has_point = state.lat.value is not None and state.lon.value is not None
+
         if state.manual_coords.value:
             rv.TextField(
                 v_model=lat_text,
@@ -88,24 +90,32 @@ def PointStep(state, sepal_map):
                 block=True,
             )
         else:
+            hint = (
+                "Click the map again to move the current outlet."
+                if has_point
+                else "Click on the map to pick a watershed outlet."
+            )
             rv.Alert(
                 type="info",
                 text=True,
                 dense=True,
                 border="left",
                 icon="mdi-gesture-tap",
-                children=["Click on the map to pick a watershed outlet."],
+                children=[hint],
                 class_="mt-2 mb-0",
             )
 
-        if state.lat.value is not None and state.lon.value is not None:
-            rv.Chip(
-                color="primary",
-                text_color="white",
-                small=True,
-                class_="mt-3",
-                children=[
-                    rv.Icon(left=True, small=True, children=["mdi-crosshairs-gps"]),
-                    f"{state.lat.value:.5f}, {state.lon.value:.5f}",
-                ],
-            )
+        if has_point:
+            with rv.ListItem(dense=True, class_="pa-0 mt-2"):
+                with rv.ListItemIcon(class_="mr-2 my-auto"):
+                    rv.Icon(small=True, color="primary", children=["mdi-crosshairs-gps"])
+                with rv.ListItemContent(class_="py-1"):
+                    rv.ListItemTitle(
+                        class_="caption",
+                        style_="opacity: 0.6;",
+                        children=["Outlet"],
+                    )
+                    rv.ListItemSubtitle(
+                        class_="body-2",
+                        children=[f"{state.lat.value:.5f}, {state.lon.value:.5f}"],
+                    )

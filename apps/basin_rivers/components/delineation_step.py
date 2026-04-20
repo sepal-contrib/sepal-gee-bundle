@@ -213,6 +213,10 @@ def DelineationStep(
         state.zonal_df.value = None
         if legend_visible is not None:
             legend_visible.set(False)
+        for _layer_key in ("GFC forest change", "Upstream catchment"):
+            existing = sepal_map.find_layer(_layer_key, none_ok=True)
+            if existing:
+                sepal_map.remove_layer(existing)
         delineate_task(
             DelineationRequest(
                 lat=state.lat.value,
@@ -264,16 +268,19 @@ def DelineationStep(
         )
 
         if state.hybasin_list.value:
-            rv.Chip(
-                small=True,
-                class_="mt-2",
-                color="primary",
-                text_color="white",
-                children=[
-                    rv.Icon(left=True, small=True, children=["mdi-waves"]),
-                    f"{len(state.hybasin_list.value)} upstream basins",
-                ],
-            )
+            with rv.ListItem(dense=True, class_="pa-0 mt-2"):
+                with rv.ListItemIcon(class_="mr-2 my-auto"):
+                    rv.Icon(small=True, color="primary", children=["mdi-waves"])
+                with rv.ListItemContent(class_="py-1"):
+                    rv.ListItemTitle(
+                        class_="caption",
+                        style_="opacity: 0.6;",
+                        children=["Upstream basins"],
+                    )
+                    rv.ListItemSubtitle(
+                        class_="body-2",
+                        children=[str(len(state.hybasin_list.value))],
+                    )
 
             rv.Select(
                 v_model=state.method.value,
