@@ -46,7 +46,7 @@ def OverallPie(state, theme_toggle):
         legend=Legend(orient="horizontal", bottom=0, textStyle={"fontSize": 11}),
         series=[
             Pie(
-                radius=["45%", "65%"],
+                radius=["25%", "70%"],
                 center=["50%", "45%"],
                 data=data,
                 label={"show": True, "formatter": "{d}%", "fontSize": 11},

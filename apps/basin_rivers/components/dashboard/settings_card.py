@@ -31,23 +31,26 @@ def SettingsCard(state):
                 outlined=True,
             )
 
-            solara.Text(f"Timespan ({year_min}-{year_max})")
-            if year_max > year_min:
-                rv.RangeSlider(
-                    v_model=list(clamped),
-                    on_v_model=lambda v: state.sett_timespan.set(tuple(v)),
-                    min=year_min,
-                    max=year_max,
-                    step=1,
-                    thumb_label="always",
-                    dense=True,
-                    class_="mt-6",
-                )
-            else:
-                solara.Text(
-                    f"Single-year analysis: {year_min}",
-                    style={"opacity": "0.6"},
-                )
+            # Timespan only affects loss-year aggregations (stacked bar + trend).
+            # Other variables are static over the analysis period — hide the slider.
+            if state.selected_var.value == "loss":
+                solara.Text(f"Loss-year range ({year_min}-{year_max})")
+                if year_max > year_min:
+                    rv.RangeSlider(
+                        v_model=list(clamped),
+                        on_v_model=lambda v: state.sett_timespan.set(tuple(v)),
+                        min=year_min,
+                        max=year_max,
+                        step=1,
+                        thumb_label="always",
+                        dense=True,
+                        class_="mt-6",
+                    )
+                else:
+                    solara.Text(
+                        f"Single-year analysis: {year_min}",
+                        style={"opacity": "0.6"},
+                    )
 
             rv.Select(
                 v_model=list(state.selected_hybasid_chart.value),

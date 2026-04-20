@@ -342,4 +342,4 @@ def DelineationStep(
                 block=True,
             )
 
-            DashboardStep(state, theme_toggle)
+            DashboardStep(state, theme_toggle, legend_visible)

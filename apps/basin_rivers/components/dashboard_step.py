@@ -46,19 +46,23 @@ def _csv_bytes(df) -> bytes:
 
 
 @solara.component
-def DashboardStep(state, theme_toggle):
+def DashboardStep(state, theme_toggle, legend_visible=None):
     open_dialog = solara.use_reactive(False)
     resizer = solara.use_memo(lambda: _DialogResizer(), [])
 
     df = state.zonal_df.value
     has_data = df is not None and not df.empty
 
-    def _bump_resize():
+    def _on_open_change():
         if open_dialog.value:
             resizer.tick = resizer.tick + 1
+            if legend_visible is not None:
+                legend_visible.set(False)
+        elif legend_visible is not None and has_data:
+            legend_visible.set(True)
         return None
 
-    solara.use_effect(_bump_resize, [open_dialog.value])
+    solara.use_effect(_on_open_change, [open_dialog.value])
 
     if not has_data:
         return
@@ -81,17 +85,23 @@ def DashboardStep(state, theme_toggle):
         eager=True,
     ):
         with rv.Card():
-            with rv.Toolbar(dark=True, color="primary", dense=True, flat=True):
-                rv.ToolbarTitle(children=["Basin Rivers — Dashboard"])
+            with rv.CardTitle(class_="d-flex align-center py-3 px-4"):
+                rv.Icon(color="primary", class_="mr-2", children=["mdi-chart-bar"])
+                rv.Html(
+                    tag="span",
+                    class_="text-h6",
+                    children=["Basin Rivers — Dashboard"],
+                )
                 rv.Spacer()
                 solara.Button(
                     icon_name="mdi-close",
                     icon=True,
                     on_click=lambda: open_dialog.set(False),
-                    color="white",
                 )
 
-            with rv.CardText(style_="padding: 16px;"):
+            rv.Divider()
+
+            with rv.CardText(class_="pa-4"):
                 # Mount the resizer inside the dialog so it lives in the DOM.
                 rv.Html(tag="div", children=[resizer], style_="display:none;")
                 _DashboardContent(state, theme_toggle)
