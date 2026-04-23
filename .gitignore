@@ -11,3 +11,6 @@ build/
 *.geojson
 .ruff_cache/
 .pytest_cache/
+
+# Superpowers skill scratch
+.superpowers/

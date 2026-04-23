@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SOLARA_FILE="${1:-app.py}"
-PORT="${2:-8767}"
+PORT="${2:-8768}"
 
 if [[ -f .env ]]; then
   while IFS= read -r line; do

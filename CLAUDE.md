@@ -12,6 +12,8 @@ Bundle of lightweight GEE-based SEPAL applications sharing a single Solara conta
 | `/basin-rivers` | Basin Rivers | [sepal-contrib/basin-rivers](https://github.com/sepal-contrib/basin-rivers) | Upstream watershed delineation + forest change stats (HydroSHEDS + Hansen GFC) |
 | `/gfc` | Global Forest Change | [sepal-contrib/gfc_wrapper_python](https://github.com/sepal-contrib/gfc_wrapper_python) | Hansen forest mask visualization and export |
 | `/coverage-analysis` | Coverage Analysis | [sepal-contrib/coverage_analysis](https://github.com/sepal-contrib/coverage_analysis) | Satellite imagery coverage and NDVI statistics |
+| `/tmf-sepal` | Tropical Moist Forests | [sepal-contrib/tmf_sepal](https://github.com/sepal-contrib/tmf_sepal) | JRC TMF Degradation / Deforestation / Annual Change visualization and export |
+| `/alos-mosaics` | ALOS PALSAR mosaics | [sepal-contrib/alos_mosaics](https://github.com/sepal-contrib/alos_mosaics) | JAXA ALOS PALSAR / PALSAR-2 yearly mosaics + FNF visualization and export |
 
 ## Architecture Rules
 
@@ -116,6 +118,7 @@ sepal-gee-bundle/
 | **Basin Rivers** | ⬜ Pending | CLAUDE.md with legacy analysis, stub page/model | params, scripts (watershed, gfc, stats, viz), components (point, params, delineation, dashboard), page wiring, tests |
 | **Coverage Analysis** | ⬜ Pending | CLAUDE.md with legacy analysis, stub page/model | params (C01→C02 migration), scripts (cloud masking, collection builder, analysis, export), components, page wiring, tests |
 | **FCDM** | ⬜ Pending | CLAUDE.md with legacy analysis, stub page/model | params (C01→C02 migration), scripts (forest mask, cloud masking, collection builder, NBR pipeline), components, page wiring, tests |
+| **TMF SEPAL** | ✅ Done | Model, params, scripts (`build_tmf_image`, `viz_params_for`), components (aoi, params, export), page wired, tests (pure params/viz/legend) | Live GEE testing; confirm `v1_2023` asset availability for the running EE user |
 
 Migration order: GFC ✅ → Basin Rivers → Coverage Analysis → FCDM
 
