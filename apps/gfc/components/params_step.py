@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 import reacton.ipyvuetify as rv
 import solara
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
+from pysepal.solara.notifications import use_notifications
 
 from apps.gfc.params import GFC_LEGEND, GFC_MAX_YEAR, GFC_MIN_YEAR, SLD_INTERVALS
 from apps.gfc.scripts import classify_gfc
@@ -26,26 +27,30 @@ class VisualizeRequest:
 @solara.component
 def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=None):
     """Tree cover threshold, year range, and visualization controls."""
+    notifications = use_notifications()
     cancel_reason = solara.use_ref(None)
 
     @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
     async def viz_task(request: VisualizeRequest):
-        gfc_image = classify_gfc(
-            request.aoi_fc,
-            request.treecover,
-            request.year_start,
-            request.year_end,
-        )
+        with notifications.track("Visualizing GFC map", total_steps=2) as task:
+            task.step("Classifying GFC pixels")
+            gfc_image = classify_gfc(
+                request.aoi_fc,
+                request.treecover,
+                request.year_start,
+                request.year_end,
+            )
 
-        # Remove any previous GFC layer before adding the new one
-        sepal_map.remove_layer(GFC_LAYER_KEY, none_ok=True)
+            # Remove any previous GFC layer before adding the new one
+            sepal_map.remove_layer(GFC_LAYER_KEY, none_ok=True)
 
-        await sepal_map.add_ee_layer_async(
-            gfc_image.sldStyle(SLD_INTERVALS),
-            {},
-            GFC_LAYER_KEY,
-            autocenter=True,
-        )
+            task.step("Loading tiles on map")
+            await sepal_map.add_ee_layer_async(
+                gfc_image.sldStyle(SLD_INTERVALS),
+                {},
+                GFC_LAYER_KEY,
+                autocenter=True,
+            )
 
         logger.info("GFC visualization loaded: %s", GFC_LAYER_KEY)
         return gfc_image
@@ -55,15 +60,15 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
         if viz_task.pending or viz_task.cancelled:
             return
         if viz_task.error:
-            state.error_message.value = str(viz_task.exception)
+            notifications.error(f"Visualization failed: {viz_task.exception}")
             return
         if viz_task.finished and viz_task.value is not None:
-            state.error_message.value = None
             state.result_image.value = viz_task.value
             if legend_data is not None:
                 legend_data.set(asdict(GFC_LEGEND))
             if legend_visible is not None:
                 legend_visible.set(True)
+            notifications.success("GFC layer added to map")
 
     solara.use_effect(
         _sync_viz,
@@ -72,11 +77,10 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
 
     def _start_viz():
         if state.aoi.value is None:
-            state.error_message.value = "Please select an Area of Interest first."
+            notifications.warning("Please select an Area of Interest first.")
             return
         cancel_reason.current = None
         state.loading.value = True
-        state.error_message.value = None
         state.result_image.value = None
         if legend_visible is not None:
             legend_visible.set(False)
@@ -123,9 +127,6 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             dense=True,
             outlined=True,
         )
-
-        if state.error_message.value:
-            rv.Alert(type="error", text=True, children=[state.error_message.value])
 
         TaskButtonComponent(
             label="Add layer",

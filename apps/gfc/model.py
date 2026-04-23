@@ -10,3 +10,5 @@ class GfcState:
         self.year_start = solara.reactive(2001)
         self.year_end = solara.reactive(2024)
         self.result_image = solara.reactive(None)
+        self.loading = solara.reactive(False)
+        self.stats_rows = solara.reactive([])

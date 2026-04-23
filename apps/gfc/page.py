@@ -8,6 +8,8 @@ from pysepal.mapping import SepalMap
 from pysepal.sepalwidgets.vue_app import MapApp, ThemeToggle
 from pysepal.solara import get_current_gee_interface, setup_theme_colors, with_sepal_sessions
 from pysepal.solara.components.legend import LegendComponent
+from pysepal.solara.notifications import NotificationProvider
+from solara.lab.components.theming import theme
 
 from .components import AoiStep, ParamsStep, ResultsStep
 from .model import GfcState
@@ -63,7 +65,9 @@ def AboutContent():
 def GfcPage():
     """Global Forest Change mask visualization and export."""
     setup_theme_colors()
+    NotificationProvider()
     theme_toggle = ThemeToggle()
+    theme_toggle.observe(lambda e: setattr(theme, "dark", e["new"]), "dark")
     gee_interface = get_current_gee_interface()
 
     state = solara.use_memo(lambda: GfcState(), [])
@@ -107,7 +111,7 @@ def GfcPage():
         {
             "title": "Results & Export",
             "icon": "mdi-chart-bar",
-            "content": [ResultsStep(state, sepal_map, gee_interface)],
+            "content": [ResultsStep(state, sepal_map, gee_interface, legend_visible)],
         },
     ]
 

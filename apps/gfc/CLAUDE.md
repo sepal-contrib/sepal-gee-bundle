@@ -51,6 +51,48 @@ The classification is implemented as a band math expression string, which is con
 
 The export pipeline (GEE → Drive → download → merge → colormap) is a common pattern but tightly coupled to the old gdrive helper. Replace with pysepal/GEEInterface export patterns.
 
+## Dashboard
+
+After `ResultsStep` computes stats, a **DashboardStep** button opens a large
+modal (`rv.Dialog(max_width="1400px", scrollable=True, eager=True)`) with:
+
+- **SummaryCard** — compact `_StatItem` row: AOI total area, stable forest
+  (ha + %), forest loss (ha + %), gain, gain+loss, tree-cover threshold,
+  year range.
+- **OverallPie** — donut across the top-level classes (Stable forest /
+  Non-forest / Gain / Gain+Loss / Loss). Colours come from `params.HEX_PALETTE`.
+- **LossTrend** — bar chart of loss area per year, each bar tinted with the
+  matching loss-year gradient colour (`theme.loss_year_color`).
+- **Download CSV** — `solara.FileDownload` of the raw `stats_rows`.
+
+### Wiring
+
+- `model.GfcState` grew a `stats_rows: list` reactive. `results_step.py`
+  writes to it when `compute_task` finishes.
+- `page.py` passes `legend_visible` through to `ResultsStep` →
+  `DashboardStep`. Dialog hides the legend on open, restores it on close.
+- The inline `_LossChart` previously rendered in `results_step.py` was
+  **removed** — loss-by-year lives only in the dashboard. `_StatsTable`
+  remains in the right panel so basic numbers are visible without opening
+  the modal.
+- Auto-opens whenever a fresh `stats_rows` list arrives (watches
+  `id(rows)`), matching the basin-rivers UX.
+
+### Known-trap compatibility
+
+Same traps as basin-rivers (see its CLAUDE "ipecharts traps" section):
+
+- **`_DialogResizer`** — copied verbatim. Bumps `tick` on dialog open to
+  fire a `window.resize` event so ECharts re-measures its container.
+- **`Option.grid` = `Grid(...)`, never a dict** — enforced.
+- **No click-to-select on the pie** — `EChartsWidget.element` returns a
+  reacton Element with an incompatible `.on(...)` signature.
+- **Every chart `Option` includes `Toolbox(show=True, feature={"saveAsImage": ...})`**
+  so users get a PNG download per chart.
+- **Chart wrapper classes**: `.gfc-echart-overall`, `.gfc-echart-loss-trend`.
+  Keep in sync if we later wire a PDF report (basin-rivers' `EChartCapture`
+  pattern).
+
 ## Migration Notes
 
 - The GFC classification logic is essentially the same as basin-rivers `get_gfc` — consider a shared utility in `scripts/` or a common GFC helper

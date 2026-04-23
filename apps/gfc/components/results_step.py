@@ -1,111 +1,145 @@
 """Results display and export step for GFC app."""
 
-import asyncio
 import logging
+from dataclasses import dataclass
 
 import reacton.ipyvuetify as rv
 import solara
+from pysepal.solara.components.export import (
+    ExportLauncher,
+    ExportSource,
+    ResolvedExport,
+)
+from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
+from pysepal.solara.notifications import use_notifications
 
 from apps.gfc.params import GFC_MAX_YEAR
 from apps.gfc.scripts import compute_area_stats, parse_area_stats
 
+from .dashboard_step import DashboardStep
+
 logger = logging.getLogger("sepal_gee_bundle.gfc")
 
 
+@dataclass(frozen=True, slots=True)
+class StatsRequest:
+    result_image: object  # ee.Image
+    aoi_fc: object  # ee.FeatureCollection
+
+
 @solara.component
-def ResultsStep(state, sepal_map, gee_interface):
-    """Area statistics, loss chart, and export controls."""
-    stats_rows, set_stats_rows = solara.use_state([])
-    error, set_error = solara.use_state("")
-    export_status, set_export_status = solara.use_state("")
+def ResultsStep(state, sepal_map, gee_interface, legend_visible=None):
+    """Area statistics, dashboard, and export controls."""
+    notifications = use_notifications()
+    stats_rows = state.stats_rows.value
+    compute_cancel = solara.use_ref(None)
 
-    # Trigger counters — incrementing these triggers the corresponding use_task
-    compute_trigger = solara.use_reactive(0)
-    export_trigger = solara.use_reactive(0)
+    # --- Compute stats task ---
+    @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
+    async def compute_task(request: StatsRequest):
+        with notifications.track("Computing area statistics", total_steps=2) as task:
+            task.step("Running reduceRegion on GEE")
+            stats_obj = compute_area_stats(request.result_image, request.aoi_fc)
+            raw = await gee_interface.get_info_async(stats_obj)
+            task.step("Parsing results")
+            return parse_area_stats(raw)
 
-    @solara.lab.use_task(
-        dependencies=[compute_trigger.value], raise_error=False, prefer_threaded=True
+    def _sync_compute():
+        if compute_task.pending or compute_task.cancelled:
+            return
+        if compute_task.error:
+            notifications.error(f"Statistics failed: {compute_task.exception}")
+            return
+        if compute_task.finished and compute_task.value is not None:
+            state.stats_rows.set(compute_task.value)
+            logger.info("Area statistics computed: %d classes", len(compute_task.value))
+            notifications.success(f"Area statistics computed ({len(compute_task.value)} classes)")
+
+    solara.use_effect(
+        _sync_compute,
+        [compute_task.pending, compute_task.cancelled, compute_task.finished, compute_task.error],
     )
-    async def compute_task():
-        if compute_trigger.value == 0:
+
+    def _start_compute():
+        if state.result_image.value is None or state.aoi.value is None:
+            notifications.warning("Run visualization first.")
             return
-        set_error("")
-        aoi = state.aoi.value
+        compute_cancel.current = None
+        state.stats_rows.set([])
+        compute_task(
+            StatsRequest(
+                result_image=state.result_image.value,
+                aoi_fc=state.aoi.value.feature_collection,
+            )
+        )
+
+    compute_btn = use_task_button(
+        compute_task, on_start=_start_compute, cancel_reason_ref=compute_cancel
+    )
+
+    # --- Export sources ---
+    export_sources: tuple[ExportSource, ...] = ()
+    if state.result_image.value is not None and state.aoi.value is not None:
         result_image = state.result_image.value
+        aoi_fc = state.aoi.value.feature_collection
+        treecover = state.treecover.value
+        year_start = state.year_start.value
+        year_end = state.year_end.value
+        default_name = f"gfc_{treecover}_{year_start}_{year_end}"
 
-        if aoi is None or result_image is None:
-            set_error("Run visualization first.")
-            return
-
-        raw = await asyncio.to_thread(
-            lambda: gee_interface.get_info(
-                compute_area_stats(result_image, aoi.feature_collection)
+        export_sources = (
+            ExportSource(
+                id="gfc_classified",
+                label="GFC classified image",
+                kind="image",
+                resolve=lambda img=result_image, fc=aoi_fc, name=default_name: ResolvedExport(
+                    ee_object=img,
+                    default_name=name,
+                    region=fc.geometry(),
+                    default_scale=30,
+                    gee_folder="gfc",
+                    drive_folder="gfc_exports",
+                    sepal_folder="gfc",
+                    max_pixels=1e13,
+                ),
+            ),
+            ExportSource(
+                id="gfc_aoi",
+                label="AOI boundary",
+                kind="table",
+                resolve=lambda fc=aoi_fc, name=default_name: ResolvedExport(
+                    ee_object=fc,
+                    default_name=f"{name}_aoi",
+                    gee_folder="gfc",
+                    drive_folder="gfc_exports",
+                    sepal_folder="gfc",
+                ),
             ),
         )
-        rows = parse_area_stats(raw)
-        set_stats_rows(rows)
-        logger.info("Area statistics computed: %d classes", len(rows))
 
-    @solara.lab.use_task(
-        dependencies=[export_trigger.value], raise_error=False, prefer_threaded=True
-    )
-    async def export_task():
-        if export_trigger.value == 0:
-            return
-        set_export_status("Exporting to asset...")
-        aoi = state.aoi.value
-        result_image = state.result_image.value
-        t = state.treecover.value
-        ys = state.year_start.value
-        ye = state.year_end.value
-        description = f"gfc_{t}_{ys}_{ye}"
-
-        folder = await gee_interface.get_folder_async()
-        asset_id = f"{folder}/{description}"
-
-        await gee_interface.export_image_to_asset_async(
-            image=result_image,
-            asset_id=asset_id,
-            description=description,
-            scale=30,
-            region=aoi.feature_collection.geometry(),
-            max_pixels=1e13,
-        )
-        set_export_status(f"Export task started: {asset_id}")
-        logger.info("Export to asset started: %s", asset_id)
-
+    # --- UI ---
     with solara.Column():
-        solara.Button(
-            "Compute area statistics",
-            icon_name="mdi-chart-bar",
-            on_click=lambda *_: compute_trigger.set(compute_trigger.value + 1),
-            loading=compute_task.pending,
-            disabled=compute_task.pending or state.result_image.value is None,
-            color="primary",
+        TaskButtonComponent(
+            label="Compute area statistics",
+            **compute_btn,
+            icon="mdi-chart-bar",
+            external_busy=state.result_image.value is None,
+            small=True,
+            block=True,
         )
-
-        if compute_task.error:
-            rv.Alert(type="error", text=True, children=[str(compute_task.error)])
-
-        if error:
-            rv.Alert(type="error", text=True, children=[error])
 
         if stats_rows:
             _StatsTable(stats_rows)
-            _LossChart(stats_rows)
 
-        if export_status:
-            rv.Alert(type="info", text=True, children=[export_status])
+        DashboardStep(state, legend_visible=legend_visible, sepal_map=sepal_map)
 
-        if export_task.error:
-            rv.Alert(type="error", text=True, children=[str(export_task.error)])
-
-        solara.Button(
-            "Export to GEE Asset",
-            icon_name="mdi-cloud-upload",
-            on_click=lambda *_: export_trigger.set(export_trigger.value + 1),
-            loading=export_task.pending,
-            disabled=export_task.pending or state.result_image.value is None,
+        ExportLauncher(
+            sources=export_sources,
+            label="Export results",
+            button_text=True,
+            small=True,
+            block=True,
+            gee_interface=gee_interface,
         )
 
 
@@ -136,20 +170,3 @@ def _StatsTable(rows: list):
         hide_default_footer=True,
         class_="mt-2",
     )
-
-
-@solara.component
-def _LossChart(rows: list):
-    """Simple text-based loss-by-year summary."""
-    loss_rows = [r for r in rows if 1 <= r["code"] <= GFC_MAX_YEAR]
-    if not loss_rows:
-        return
-
-    with rv.Card(class_="mt-2", flat=True):
-        with rv.CardTitle():
-            solara.Text("Loss by year")
-        with rv.CardText():
-            for r in loss_rows:
-                year = 2000 + r["code"]
-                area = r["area_ha"]
-                solara.Text(f"{year}: {area:,.0f} ha")
