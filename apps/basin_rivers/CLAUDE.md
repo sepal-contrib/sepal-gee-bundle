@@ -57,7 +57,7 @@ deterministic blue/teal palette (`CATCH_COLOR_PALETTE`) by sorted basin id.
 
 ```
 apps/basin_rivers/
-├── page.py                      # state + SepalMap + ThemeToggle + legend reactives + MapApp
+├── page.py                      # state + SepalMap + ThemeState + legend reactives + MapApp
 ├── model.py                     # BasinRiversState (single dataclass-ish of reactives)
 ├── params.py                    # GFC_DATASET/SLD/LEGEND, CATCH_COLOR_PALETTE,
 │                                # VARIABLE_LABELS, CATCH_{PIE,BAR}_TITLES,

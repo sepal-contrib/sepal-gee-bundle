@@ -5,8 +5,13 @@ import logging
 import solara
 from pysepal.logger import setup_logging
 from pysepal.mapping import SepalMap
-from pysepal.sepalwidgets.vue_app import MapApp, ThemeToggle
-from pysepal.solara import get_current_gee_interface, setup_theme_colors, with_sepal_sessions
+from pysepal.sepalwidgets.vue_app import MapApp
+from pysepal.solara import (
+    get_current_gee_interface,
+    get_current_theme_state,
+    setup_theme_colors,
+    with_sepal_sessions,
+)
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
@@ -24,12 +29,12 @@ def BasinRiversPage():
     """Upstream watershed delineation and forest change statistics."""
     setup_theme_colors()
     NotificationProvider()
-    theme_toggle = ThemeToggle()
+    theme_state = get_current_theme_state()
     gee_interface = get_current_gee_interface()
 
     state = solara.use_memo(lambda: BasinRiversState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(gee_interface=gee_interface, fullscreen=True, theme_toggle=theme_toggle),
+        lambda: SepalMap(gee_interface=gee_interface, fullscreen=True, theme_state=theme_state),
         [id(gee_interface)],
     )
 
@@ -63,7 +68,6 @@ def BasinRiversPage():
                     state,
                     sepal_map,
                     gee_interface,
-                    theme_toggle,
                     legend_data,
                     legend_visible,
                 )
@@ -79,7 +83,7 @@ def BasinRiversPage():
         right_panel_config=right_panel_config,
         right_panel_content=right_panel_content,
         right_panel_open=True,
-        theme_toggle=[theme_toggle],
+        theme_state=theme_state,
     )
 
     LegendComponent(
