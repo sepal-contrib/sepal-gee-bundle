@@ -1,78 +1,126 @@
 # FCDM — Forest Canopy Disturbance Monitoring
 
+> Read the bundle CLAUDE at `/home/dguerrero/1_modules/sepal-gee-bundle/CLAUDE.md`
+> and invoke the `pysepal` skill before editing. This file only documents
+> fcdm-specific decisions and traps.
+
+## Status
+
+Migration **initial scaffold complete**. 21 pytest passing, ruff clean. Route
+registered at `/fcdm`. Needs live GEE smoke test.
+
 ## Purpose
 
-Detect and map forest canopy disturbances using Delta-rNBR (relative Normalized Burn Ratio) spectral change detection. Compares a reference period against an analysis period to identify where forest canopy has been disturbed.
+Detect forest canopy disturbance using Delta relative Normalized Burn Ratio
+(Delta-rNBR) spectral change detection between a reference period and an
+analysis period.
 
-## User Workflow
+## User workflow
 
-1. **Select AOI** — draw or upload an area of interest
-2. **Configure forest mask** — choose how to define forest: GFC tree cover threshold, JRC Roadless map, no mask, or a custom binary asset
-3. **Select sensors** — one or more of: Landsat 4/5/7/8, Sentinel-2
-4. **Set date ranges** — a reference period (baseline) and an analysis period (investigation)
-5. **Set algorithm parameters** — kernel radius, DDR filter threshold/radius/offset, cloud buffer
-6. **Run analysis** — produces Delta-rNBR map on the map
-7. **Export** — download selected layers (forest mask, reference rNBR, analysis rNBR, Delta-rNBR)
+1. Select an **Area of Interest** (AoiView, `methods=["-SHAPE", "-POINTS"]`).
+2. **Forest mask & sensors** — Hansen GFC / JRC TMF Roadless / no mask, plus
+   multi-select sensors (Landsat 4/5/7/8, Sentinel-2).
+3. **Dates & parameters** — reference and analysis date ranges, cloud buffer,
+   kernel radius, DDR filter threshold/radius/offset.
+4. **Run & export** — single task runs `run_fcdm(...)` to produce a
+   `FcdmResult` (forest mask, reference/analysis rNBR, delta rNBR raw and
+   DDR-filtered). Adds the AOI, forest mask and Delta-rNBR to the map.
+   `ExportLauncher` exposes five image sources (delta filtered/raw,
+   reference/analysis rNBR, forest mask).
 
-## GEE Datasets
+## GEE datasets (migrated to C02)
 
-- **Hansen GFC**: `UMD/hansen/global_forest_change_2020_v1_8` — tree cover 2000, loss year
-- **JRC TMF**: `projects/JRC/TMF/v1_2020/AnnualChanges` — Roadless forest map
-- **Landsat SR/TOA**: C01 T1 collections for L4, L5, L7, L8
-- **Sentinel-2**: `COPERNICUS/S2` (TOA) and `COPERNICUS/S2_SR`
+| Sensor | TOA | SR |
+|---|---|---|
+| Landsat 4 | `LANDSAT/LT04/C02/T1_TOA` | `LANDSAT/LT04/C02/T1_L2` |
+| Landsat 5 | `LANDSAT/LT05/C02/T1_TOA` | `LANDSAT/LT05/C02/T1_L2` |
+| Landsat 7 | `LANDSAT/LE07/C02/T1_TOA` | `LANDSAT/LE07/C02/T1_L2` |
+| Landsat 8 | `LANDSAT/LC08/C02/T1_TOA` | `LANDSAT/LC08/C02/T1_L2` |
+| Sentinel-2 | `COPERNICUS/S2_HARMONIZED` | `COPERNICUS/S2_SR_HARMONIZED` |
+| Hansen GFC | — | `UMD/hansen/global_forest_change_2024_v1_12` |
+| JRC TMF | — | `projects/JRC/TMF/v1_2024/AnnualChanges` |
 
-**Note**: Landsat collections use deprecated C01. Migration should consider upgrading to C02.
+## File layout
 
-## Core Algorithm
+```
+apps/fcdm/
+├── page.py                      # NotificationProvider + SepalMap + MapApp + 4-section right panel
+├── model.py                     # FcdmState — flat reactives
+├── params.py                    # Datasets, SENSORS band map (C02), defaults, viz
+├── components/
+│   ├── aoi_step.py              # AoiView with SHAPE/POINTS excluded
+│   ├── forest_step.py           # forest mask source + GFC threshold + sensor multi-select
+│   ├── params_step.py           # date fields + cloud/kernel/DDR sliders
+│   └── run_step.py              # TaskButton + ExportLauncher; clears old layers on run
+└── scripts/
+    ├── forest_mask.py           # get_forest_mask — GFC / roadless / no_map / custom asset
+    ├── cloud_masking.py         # QA_PIXEL-based Landsat + SCL-based S2 + iforce_pino_step1 preserved
+    ├── collection.py            # build_collection — SR+TOA join for Landsat, cloud + forest masks
+    └── nbr_pipeline.py          # compute_nbr, adjustment_kernel, capping, ddr_filter, run_fcdm
+```
 
-1. **Forest mask**: built from GFC (tree cover >= threshold, excluding prior loss), JRC Roadless, or custom asset
-2. **Cloud masking**: sensor-specific — Landsat uses pixel_qa + simpleCloudScore, Sentinel-2 uses IFORCE/PINO method (JRC, Dario Simonetti) with SCL and spectral rules
-3. **NBR computation**: `(NIR - SWIR2) / (NIR + SWIR2)` per scene, plus yearday band
-4. **Adjustment kernel**: self-referencing via focal median subtraction (configurable radius)
-5. **Capping**: clamp NBR to [0, -1], invert sign
-6. **Quality mosaic**: condense per-period to single image using `qualityMosaic("NBR")`
-7. **Delta-rNBR**: analysis minus reference
-8. **DDR filtering**: disturbing-density-related spatial filter — mask pixels without enough disturbance events within a kernel radius
+## Algorithm notes
 
-## Parameters
+- `run_fcdm` is a pure GEE graph builder: **no `.getInfo()`** inside. The
+  expensive `getInfo()` on collection size from the legacy `launch_tile.py`
+  is intentionally dropped — we don't block on collection emptiness any more.
+  If needed, re-add via `await gee_interface.get_info_async(coll.size())` in
+  the component.
+- DDR filter and adjustment kernel preserved verbatim from legacy.
+- `iforce_pino_step1` (JRC Sentinel-2 L1C cloud masking, Dario Simonetti) is
+  kept in `cloud_masking.py` for future use but the default S2 masker is
+  `masking_sentinel2_sr` (SCL band) because we default to `S2_SR_HARMONIZED`.
+  IFORCE step2 was dropped — it required per-scene median composites that
+  weren't used by the active pipeline.
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `forest_map` | `gfc` | Forest mask source: gfc, roadless, no_map, or asset ID |
-| `forest_map_year` | 2000 | Year for forest mask baseline |
-| `treecover` | 70 | GFC tree cover threshold (%) |
-| `sensors` | [] | Selected sensors (multi-select) |
-| `cloud_buffer` | 500 | Cloud mask buffer radius (meters) |
-| `analysis_start/end` | — | Analysis period date range |
-| `reference_start/end` | — | Reference period date range |
-| `kernel_radius` | 150 | Adjustment kernel radius (meters, max 1000) |
-| `filter_threshold` | 0.035 | DDR disturbance threshold |
-| `filter_radius` | 80 | DDR kernel radius (meters, 10-500) |
-| `cleaning_offset` | 3 | DDR minimum events per kernel (max 50) |
+## Legacy file mapping
 
-## Outputs
+| Legacy | New location |
+|---|---|
+| `component/parameter/dataset.py` | `params.py` (HANSEN_GFC, JRC_ROADLESS) |
+| `component/parameter/sensors.py` | `params.py` SENSORS (C02 bands) |
+| `component/parameter/ui_input.py` | `params.py` (FOREST_MAP_ITEMS, defaults) |
+| `component/parameter/viz_params.py` | `params.py` (viz_forest_mask, DELTA_NBR_VIS) |
+| `component/scripts/process_scripts.py` | split across `scripts/forest_mask.py`, `scripts/cloud_masking.py`, `scripts/collection.py`, `scripts/nbr_pipeline.py` |
+| `component/tile/launch_tile.py` | `components/run_step.py` + `scripts/nbr_pipeline.run_fcdm` |
+| `component/tile/sensor_tile.py` | `components/forest_step.py` |
+| `component/tile/time_tile.py` | `components/params_step.py` |
+| `component/tile/fcdm_tile.py` | `components/params_step.py` (parameters section) |
+| `component/tile/basemap_tile.py` | dropped — basemap handled by SepalMap |
+| `component/tile/questionnaire_tile.py` | dropped — replaced by steps + multi-select |
+| `component/tile/result_tile.py` | `components/run_step.py` (ExportLauncher) |
+| custom `ExportMap` widget | `pysepal.solara.components.export.ExportLauncher` |
 
-- **Map layers**: forest mask, reference rNBR, analysis rNBR, Delta-rNBR (palette: grey to red)
-- **Export**: GeoTIFF of selected layers via GEE export widget
+## Known caveats for the user to verify live
 
-## Scripts Worth Preserving
+- **C01 → C02 band renames**: Landsat SR band names changed. The pipeline
+  reads `SR_B1..7`, `QA_PIXEL`, `ST_B6`/`ST_B10` instead of `B1..7`, `pixel_qa`,
+  `B6`/`B10`. `simpleCloudScore` still comes from the TOA asset and is joined
+  on `system:index` unchanged.
+- **QA_PIXEL mask simplified**: legacy code used pixel_qa bits 3/5/6/7/8 + a
+  separate `sr_cloud_qa` bit-4 shadow check. C02 has no `sr_cloud_qa`; we
+  now mask on QA_PIXEL bits 1 (dilated cloud), 2 (cirrus), 3 (cloud),
+  4 (cloud shadow). The `unsure_clouds` branch was dropped — revisit if
+  users find the new mask too permissive.
+- **Sentinel-2 L2A only**: default S2 source is `S2_SR_HARMONIZED` with the
+  SCL masker. `iforce_pino_step1` is preserved if you want to switch to TOA.
+- **Export scale**: all image exports default to 30 m. Sentinel-2 only
+  should use 10 m — consider exposing a per-source scale later.
+- **No blocking collection-size check**: the legacy UI raised if either
+  reference or analysis collections were empty. The new pipeline is
+  lazy — an empty collection produces a masked image and surfaces as
+  "no tiles on the map" at visualization time. Rerun or change dates.
 
-The GEE processing logic in the legacy `process_scripts.py` is algorithmically valuable:
-- `compute_nbr` — NBR + yearday computation
-- `adjustment_kernel` — self-referencing kernel
-- `capping` — value normalization
-- `ddr_filter` — spatial density filtering
-- `get_forest_mask` — forest mask construction from multiple sources
-- `get_collection` — collection assembly with cloud + forest masking
-- `IFORCE_PINO_step1/step2` — JRC Sentinel-2 cloud masking (Dario Simonetti)
-- `masking_1QB`, `masking_L_1`, `masking_S_1` — per-sensor cloud masking
-- `masking_2` — sensor error + forest masking
+## Follow-ups
 
-The sensor band mapping in `sensors.py` and viz params in `viz_params.py` are also needed.
+- Expose a custom-asset forest-mask option in the UI (state field
+  `forest_map_asset` exists but no widget wires it yet).
+- Add an ipecharts summary (area of detected disturbance by class) — not
+  in the legacy but useful. Use `ipecharts`, not matplotlib.
+- Add zonal statistics + CSV export (mirror basin_rivers dashboard
+  pattern) if demand materialises.
 
-## Migration Notes
+## Legacy reference
 
-- Band mappings use Landsat C01 — need updating to C02
-- Cloud masking is complex but well-tested; preserve the logic, clean up the code
-- The `launch_tile.py` orchestration flow shows the full pipeline end-to-end
-- Export uses a custom `ExportMap` widget; replace with pysepal export patterns
+`/home/dguerrero/1_modules/fcdm/` — original sepal_ui module. Useful for
+algorithmic questions. Don't copy UI code.
