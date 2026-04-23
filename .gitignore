@@ -12,5 +12,6 @@ build/
 .ruff_cache/
 .pytest_cache/
 
-# Superpowers skill scratch
+# Superpowers skill scratch and docs
 .superpowers/
+docs/superpowers/
