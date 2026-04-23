@@ -18,12 +18,14 @@ plus per-catchment Hansen GFC forest-change stats.
 
 1. Pick an outlet (map click or manual lat/lon) — right-panel "Outlet" section.
 2. Configure level / year range / treecover — "Parameters".
-3. **Trace watershed** — classifies GFC, adds map layers + legend.
-4. Choose "All upstream basins" or "Filter specific basins".
-5. **Calculate statistics** — zonal stats, seeds dashboard state.
-6. **Open dashboard** — modal (`max_width=1400px`) with settings card + overall donut +
-   per-catchment donut + per-catchment bar. Loss-trend line appears only when
-   `selected_var == "loss"`.
+3. **Trace watershed** — classifies GFC, adds map layers + legend. Map-only; no
+   zonal stats run here.
+4. (Optional) Choose "All upstream basins" or "Filter specific basins".
+5. **Compute & show dashboard** — runs zonal stats on the current basin subset
+   and auto-opens the modal (`max_width=1400px`) with settings card + overall
+   donut + per-catchment donut + per-catchment bar. Loss-trend line appears
+   only when `selected_var == "loss"`. Re-pressing re-runs stats against the
+   updated filter selection without re-tracing the watershed.
 
 ## GEE datasets
 
@@ -65,7 +67,7 @@ apps/basin_rivers/
 ├── components/
 │   ├── point_step.py            # outlet picker
 │   ├── params_step.py           # level / years / treecover
-│   ├── delineation_step.py      # 2 tasks, map layers, legend on/off, seeds dashboard, renders DashboardStep
+│   ├── delineation_step.py      # single combined task, map layers, legend on/off, seeds dashboard, renders DashboardStep
 │   ├── dashboard_step.py        # button + modal + _DialogResizer + CSV download
 │   └── dashboard/
 │       ├── theme.py, overall_pie.py, catchment_pie.py,
@@ -93,10 +95,15 @@ Flat reactives on `BasinRiversState`. No nested sub-stores.
 - `page.py` owns `legend_data = use_reactive({})`, `legend_visible = use_reactive(False)`
   and passes both to `DelineationStep`, which forwards `legend_visible` to
   `DashboardStep`. `LegendComponent(...)` is mounted at the end of `page.py`.
-- `_sync_delineation` sets the legend on, warns if `len(hybas_ids) > BASIN_WARN_THRESHOLD` (50).
-- `_sync_stats` resets `selected_var` to `"all"`, respects filter-mode when seeding
-  `selected_hybasid_chart`, and **caps it to top `MAX_CATCH_DISPLAY` (10) basins by area**
-  when too many, with an info notification.
+- `_sync_run` (single combined sync) sets the legend on, warns if
+  `len(hybas_ids) > BASIN_WARN_THRESHOLD` (50), resets `selected_var` to `"all"`,
+  respects filter-mode when seeding `selected_hybasid_chart`, and **caps it to
+  top `MAX_CATCH_DISPLAY` (10) basins by area** when too many, with an info
+  notification.
+- The filter-mode basin subset is resolved *inside* the task
+  (`ids = filter_ids if method == "filter" and filter_ids else hybas_ids`) so
+  changing the selection and re-pressing **Trace & compute** re-runs the full
+  pipeline against the chosen subset.
 - On modal open, `DashboardStep` calls `legend_visible.set(False)` to stop the map
   legend from floating over the dialog; restores on close.
 

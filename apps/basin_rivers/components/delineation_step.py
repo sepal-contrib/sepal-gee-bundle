@@ -1,4 +1,8 @@
-"""Upstream delineation and statistics computation."""
+"""Upstream delineation. Trace watershed + add map layers.
+
+Statistics computation and dashboard live in `dashboard_step.py` — the
+dashboard button runs the zonal stats on demand.
+"""
 
 import logging
 from dataclasses import asdict as _asdict
@@ -7,21 +11,22 @@ from dataclasses import dataclass
 import ee
 import reacton.ipyvuetify as rv
 import solara
+from pysepal.solara.components.export import (
+    ExportLauncher,
+    ExportSource,
+    ResolvedExport,
+)
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
 
 from apps.basin_rivers.params import (
     BASIN_WARN_THRESHOLD,
     GFC_LEGEND,
-    MAX_CATCH_DISPLAY,
     SLD_INTERVALS,
 )
 from apps.basin_rivers.scripts import (
     classify_gfc,
-    compute_zonal_stats,
-    get_hydroshed_collection,
     get_upstream_basin_ids,
-    parse_zonal_stats,
 )
 from apps.basin_rivers.scripts.visualization import create_basins_layer
 
@@ -31,19 +36,10 @@ logger = logging.getLogger("sepal_gee_bundle.basin_rivers")
 
 
 @dataclass(frozen=True, slots=True)
-class DelineationRequest:
+class TraceRequest:
     lat: float
     lon: float
     level: int
-    year_start: int
-    year_end: int
-    treecover: int
-
-
-@dataclass(frozen=True, slots=True)
-class StatsRequest:
-    level: int
-    hybas_ids: tuple[int, ...]
     year_start: int
     year_end: int
     treecover: int
@@ -54,19 +50,16 @@ def DelineationStep(
     state,
     sepal_map,
     gee_interface,
-    theme_toggle,
     legend_data=None,
     legend_visible=None,
 ):
-    """Delineate upstream basins and compute forest change statistics."""
+    """Trace upstream basins and add the GFC classification layer to the map."""
     notifications = use_notifications()
-    delineate_cancel = solara.use_ref(None)
-    stats_cancel = solara.use_ref(None)
+    trace_cancel = solara.use_ref(None)
 
-    # --- Task 1: Delineation ---
     @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
-    async def delineate_task(request: DelineationRequest):
-        with notifications.track("Delineating upstream basins", total_steps=4) as task:
+    async def trace_task(request: TraceRequest):
+        with notifications.track("Tracing upstream watershed", total_steps=4) as task:
             task.step("Validating pour point...")
             geometry = ee.Geometry.Point([request.lon, request.lat])
 
@@ -95,32 +88,29 @@ def DelineationStep(
             "geojson_data": geojson_data,
         }
 
-    def _sync_delineation():
-        """Mirror task state into AppState and add non-GEE map layers."""
-        state.loading.value = delineate_task.pending
-        if delineate_task.pending:
+    def _sync_trace():
+        state.loading.value = trace_task.pending
+        if trace_task.pending:
             return
-        if delineate_task.cancelled:
-            notifications.info("Delineation cancelled.")
+        if trace_task.cancelled:
+            notifications.info("Trace cancelled.")
             return
-        if delineate_task.error:
-            notifications.error(f"Delineation failed: {delineate_task.exception}")
+        if trace_task.error:
+            notifications.error(f"Trace failed: {trace_task.exception}")
             return
-        if delineate_task.finished and delineate_task.value is not None:
-            result = delineate_task.value
+        if trace_task.finished and trace_task.value is not None:
+            result = trace_task.value
             state.hybasin_list.value = result["hybas_ids"]
             state.upstream_fc.value = result["upstream_fc"]
             state.forest_change.value = result["gfc_image"]
             state.selected_basins.value = result["hybas_ids"]
 
-            # Add basins as vector GeoJSON layer (pure ipyleaflet, no GEE)
             existing = sepal_map.find_layer("Upstream catchment", none_ok=True)
             if existing:
                 sepal_map.remove_layer(existing)
             basins_layer = create_basins_layer(result["geojson_data"])
             sepal_map.add_layer(basins_layer, key="Upstream catchment")
 
-            # Zoom using GeoJSON bounds (no GEE call needed)
             from geopandas import GeoDataFrame
 
             gdf = GeoDataFrame.from_features(result["geojson_data"]["features"])
@@ -143,80 +133,15 @@ def DelineationStep(
             logger.info("Delineation complete: %d basins", n_basins)
 
     solara.use_effect(
-        _sync_delineation,
+        _sync_trace,
         [
-            delineate_task.pending,
-            delineate_task.finished,
-            delineate_task.error,
-            delineate_task.cancelled,
+            trace_task.pending,
+            trace_task.finished,
+            trace_task.error,
+            trace_task.cancelled,
         ],
     )
 
-    # --- Task 2: Statistics ---
-    @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
-    async def stats_task(request: StatsRequest):
-        with notifications.track("Computing zonal statistics", total_steps=3) as task:
-            task.step("Building basin selection...")
-            base_fc = get_hydroshed_collection(request.level)
-            selected_fc = base_fc.filter(ee.Filter.inList("HYBAS_ID", list(request.hybas_ids)))
-
-            task.step("Classifying GFC forest change...")
-            gfc_image = classify_gfc(
-                selected_fc, request.treecover, request.year_start, request.year_end
-            )
-
-            task.step("Running reduceRegions...")
-            stats_fc = compute_zonal_stats(gfc_image, selected_fc)
-            raw = await gee_interface.get_info_async(stats_fc)
-        return parse_zonal_stats(raw)
-
-    def _sync_stats():
-        if stats_task.pending:
-            return
-        if stats_task.cancelled:
-            notifications.info("Statistics cancelled.")
-            return
-        if stats_task.error:
-            notifications.error(f"Statistics failed: {stats_task.exception}")
-            return
-        if stats_task.finished and stats_task.value is not None:
-            from apps.basin_rivers.scripts import add_catchment_colors
-
-            df = add_catchment_colors(stats_task.value)
-            state.zonal_df.value = df
-
-            state.selected_var.value = "all"
-            seed_ids = (
-                state.selected_basins.value
-                if state.method.value == "filter" and state.selected_basins.value
-                else state.hybasin_list.value
-            )
-            seed_strs = [str(b) for b in seed_ids]
-            if len(seed_strs) > MAX_CATCH_DISPLAY:
-                # Keep the top N basins by total area for the dashboard default
-                totals = (
-                    df[df["basin"].astype(str).isin(seed_strs)]
-                    .groupby("basin")["area"]
-                    .sum()
-                    .sort_values(ascending=False)
-                )
-                seed_strs = [str(b) for b in totals.head(MAX_CATCH_DISPLAY).index.tolist()]
-                notifications.info(
-                    f"Showing top {MAX_CATCH_DISPLAY} basins by area in the dashboard. "
-                    f"Adjust the Catchments selector to include more."
-                )
-            state.selected_hybasid_chart.value = seed_strs
-            state.sett_timespan.value = (state.year_start.value, state.year_end.value)
-
-            notifications.success("Statistics ready")
-            logger.info("Statistics computed: %d rows", len(df))
-
-    solara.use_effect(
-        _sync_stats,
-        [stats_task.pending, stats_task.finished, stats_task.error, stats_task.cancelled],
-    )
-
-    # --- Button handlers ---
     def _valid_year_range() -> bool:
         if state.year_start.value > state.year_end.value:
             notifications.warning(
@@ -226,13 +151,13 @@ def DelineationStep(
             return False
         return True
 
-    def _start_delineation():
+    def _start_trace():
         if state.lat.value is None or state.lon.value is None:
             notifications.warning("Select a pour point first.")
             return
         if not _valid_year_range():
             return
-        delineate_cancel.current = None
+        trace_cancel.current = None
         state.hybasin_list.value = []
         state.zonal_df.value = None
         if legend_visible is not None:
@@ -241,8 +166,8 @@ def DelineationStep(
             existing = sepal_map.find_layer(_layer_key, none_ok=True)
             if existing:
                 sepal_map.remove_layer(existing)
-        delineate_task(
-            DelineationRequest(
+        trace_task(
+            TraceRequest(
                 lat=state.lat.value,
                 lon=state.lon.value,
                 level=state.level.value,
@@ -252,39 +177,12 @@ def DelineationStep(
             )
         )
 
-    def _start_stats():
-        ids = (
-            state.selected_basins.value
-            if state.method.value == "filter"
-            else state.hybasin_list.value
-        )
-        if not ids:
-            notifications.warning("Delineate upstream basins first.")
-            return
-        if not _valid_year_range():
-            return
-        stats_cancel.current = None
-        state.zonal_df.value = None
-        stats_task(
-            StatsRequest(
-                level=state.level.value,
-                hybas_ids=tuple(ids),
-                year_start=state.year_start.value,
-                year_end=state.year_end.value,
-                treecover=state.treecover.value,
-            )
-        )
+    trace_btn = use_task_button(trace_task, on_start=_start_trace, cancel_reason_ref=trace_cancel)
 
-    delineate_btn = use_task_button(
-        delineate_task, on_start=_start_delineation, cancel_reason_ref=delineate_cancel
-    )
-    stats_btn = use_task_button(stats_task, on_start=_start_stats, cancel_reason_ref=stats_cancel)
-
-    # --- UI ---
-    with solara.Column():
+    with solara.Column(gap="8px"):
         TaskButtonComponent(
             label="Trace watershed",
-            **delineate_btn,
+            **trace_btn,
             icon="mdi-source-branch",
             external_busy=state.lat.value is None,
             small=True,
@@ -293,7 +191,6 @@ def DelineationStep(
 
         if state.hybasin_list.value:
             rv.Select(
-                class_="mt-2",
                 v_model=state.method.value,
                 on_v_model=state.method.set,
                 items=[
@@ -320,13 +217,53 @@ def DelineationStep(
                     outlined=True,
                 )
 
-            TaskButtonComponent(
-                label="Calculate Statistics",
-                **stats_btn,
-                icon="mdi-chart-bar",
-                external_busy=not state.hybasin_list.value,
+            DashboardStep(state, gee_interface, legend_visible, legend_data, sepal_map)
+
+            export_sources: tuple[ExportSource, ...] = ()
+            if state.forest_change.value is not None and state.upstream_fc.value is not None:
+                forest_change = state.forest_change.value
+                upstream_fc = state.upstream_fc.value
+                default_name = (
+                    f"basin_rivers_{state.level.value}_"
+                    f"{state.year_start.value}_{state.year_end.value}"
+                )
+                export_sources = (
+                    ExportSource(
+                        id="forest_change",
+                        label="GFC forest change (classified)",
+                        kind="image",
+                        resolve=lambda img=forest_change, fc=upstream_fc, name=default_name: (
+                            ResolvedExport(
+                                ee_object=img,
+                                default_name=name,
+                                region=fc.geometry(),
+                                default_scale=30,
+                                gee_folder="basin_rivers",
+                                drive_folder="basin_rivers_exports",
+                                sepal_folder="basin_rivers",
+                                max_pixels=1e13,
+                            )
+                        ),
+                    ),
+                    ExportSource(
+                        id="upstream_basins",
+                        label="Upstream basins",
+                        kind="table",
+                        resolve=lambda fc=upstream_fc, name=default_name: ResolvedExport(
+                            ee_object=fc,
+                            default_name=f"{name}_basins",
+                            gee_folder="basin_rivers",
+                            drive_folder="basin_rivers_exports",
+                            sepal_folder="basin_rivers",
+                        ),
+                    ),
+                )
+
+            ExportLauncher(
+                sources=export_sources,
+                label="Export results",
+                button_text=True,
                 small=True,
                 block=True,
+                gee_interface=gee_interface,
             )
-
-            DashboardStep(state, theme_toggle, legend_visible, legend_data, sepal_map)

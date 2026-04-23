@@ -59,7 +59,7 @@ def PointStep(state, sepal_map):
         rv.Switch(
             v_model=state.manual_coords.value,
             on_v_model=state.manual_coords.set,
-            label="Manual coordinates",
+            label="Enter coordinates manually",
             dense=True,
         )
 
@@ -106,16 +106,37 @@ def PointStep(state, sepal_map):
             )
 
         if has_point:
-            with rv.ListItem(dense=True, class_="pa-0 mt-2"):
-                with rv.ListItemIcon(class_="mr-2 my-auto"):
-                    rv.Icon(small=True, color="primary", children=["mdi-crosshairs-gps"])
-                with rv.ListItemContent(class_="py-1"):
-                    rv.ListItemTitle(
+            with rv.Html(
+                tag="div",
+                class_="mt-3 pa-3",
+                style_=(
+                    "display: flex; align-items: center; justify-content: center;"
+                    " gap: 24px; border: 1px solid rgba(125,125,125,0.25);"
+                    " border-radius: 6px;"
+                ),
+            ):
+                rv.Icon(color="primary", children=["mdi-crosshairs-gps"])
+                with rv.Html(tag="div", style_="text-align: center;"):
+                    rv.Html(
+                        tag="div",
                         class_="caption",
                         style_="opacity: 0.6;",
-                        children=["Outlet"],
+                        children=["Lat"],
                     )
-                    rv.ListItemSubtitle(
+                    rv.Html(
+                        tag="div",
                         class_="body-2",
-                        children=[f"{state.lat.value:.5f}, {state.lon.value:.5f}"],
+                        children=[f"{state.lat.value:.5f}"],
+                    )
+                with rv.Html(tag="div", style_="text-align: center;"):
+                    rv.Html(
+                        tag="div",
+                        class_="caption",
+                        style_="opacity: 0.6;",
+                        children=["Lon"],
+                    )
+                    rv.Html(
+                        tag="div",
+                        class_="body-2",
+                        children=[f"{state.lon.value:.5f}"],
                     )

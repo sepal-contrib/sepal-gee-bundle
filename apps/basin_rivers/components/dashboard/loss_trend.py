@@ -3,7 +3,7 @@
 import reacton.ipyvuetify as rv
 import solara
 from ipecharts import EChartsWidget
-from ipecharts.option import Grid, Legend, Option, Title, Tooltip, XAxis, YAxis
+from ipecharts.option import Grid, Legend, Option, Title, Toolbox, Tooltip, XAxis, YAxis
 from ipecharts.option.series import Line
 
 from apps.basin_rivers.scripts.statistics import get_loss_trend_df
@@ -12,8 +12,8 @@ from .theme import use_echarts_theme
 
 
 @solara.component
-def LossTrend(state, theme_toggle):
-    theme = use_echarts_theme(theme_toggle)
+def LossTrend(state):
+    theme = use_echarts_theme()
 
     df = state.zonal_df.value
     basins = state.selected_hybasid_chart.value
@@ -48,6 +48,10 @@ def LossTrend(state, theme_toggle):
         backgroundColor="#1e1e1e00",
         title=Title(text="Forest loss trend", left="center", textStyle={"fontSize": 14}),
         tooltip=Tooltip(trigger="axis"),
+        toolbox=Toolbox(
+            show=True,
+            feature={"saveAsImage": {"show": True, "title": "Save PNG"}},
+        ),
         legend=Legend(bottom=0, textStyle={"fontSize": 10}),
         grid=Grid(left=50, right=20, top=50, bottom=60, containLabel=True),
         xAxis=XAxis(type="category", data=[str(y) for y in years], name="Year"),

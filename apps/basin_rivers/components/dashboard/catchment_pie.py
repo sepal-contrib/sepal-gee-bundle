@@ -3,7 +3,7 @@
 import reacton.ipyvuetify as rv
 import solara
 from ipecharts import EChartsWidget
-from ipecharts.option import Legend, Option, Title, Tooltip
+from ipecharts.option import Legend, Option, Title, Toolbox, Tooltip
 from ipecharts.option.series import Pie
 
 from apps.basin_rivers.params import CATCH_PIE_TITLES
@@ -13,8 +13,8 @@ from .theme import use_echarts_theme
 
 
 @solara.component
-def CatchmentPie(state, theme_toggle):
-    theme = use_echarts_theme(theme_toggle)
+def CatchmentPie(state):
+    theme = use_echarts_theme()
 
     df = state.zonal_df.value
     selected = state.selected_var.value
@@ -46,6 +46,10 @@ def CatchmentPie(state, theme_toggle):
         ),
         tooltip=Tooltip(trigger="item", formatter="Basin {b}: {c} ha ({d}%)"),
         legend=Legend(orient="horizontal", bottom=0, textStyle={"fontSize": 10}),
+        toolbox=Toolbox(
+            show=True,
+            feature={"saveAsImage": {"show": True, "title": "Save PNG"}},
+        ),
         series=[
             Pie(
                 radius=["25%", "70%"],

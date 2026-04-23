@@ -10,7 +10,7 @@ follow-up.
 import reacton.ipyvuetify as rv
 import solara
 from ipecharts import EChartsWidget
-from ipecharts.option import Legend, Option, Title, Tooltip
+from ipecharts.option import Legend, Option, Title, Toolbox, Tooltip
 from ipecharts.option.series import Pie
 
 from apps.basin_rivers.scripts.statistics import get_overall_pie_df
@@ -19,8 +19,8 @@ from .theme import use_echarts_theme
 
 
 @solara.component
-def OverallPie(state, theme_toggle):
-    theme = use_echarts_theme(theme_toggle)
+def OverallPie(state):
+    theme = use_echarts_theme()
 
     df = state.zonal_df.value
     selected = state.selected_var.value
@@ -45,6 +45,10 @@ def OverallPie(state, theme_toggle):
         title=Title(text="Overall forest change", left="center", textStyle={"fontSize": 14}),
         tooltip=Tooltip(trigger="item", formatter="{b}: {c} ha ({d}%)"),
         legend=Legend(orient="horizontal", bottom=0, textStyle={"fontSize": 11}),
+        toolbox=Toolbox(
+            show=True,
+            feature={"saveAsImage": {"show": True, "title": "Save PNG"}},
+        ),
         series=[
             Pie(
                 radius=["25%", "70%"],

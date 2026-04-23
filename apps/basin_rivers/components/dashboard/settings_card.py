@@ -9,7 +9,13 @@ from apps.basin_rivers.params import VARIABLE_LABELS
 @solara.component
 def SettingsCard(state):
     """Controls for selected_var, sett_timespan, selected_hybasid_chart."""
-    basins = state.hybasin_list.value
+    df = state.zonal_df.value
+    if df is not None and not df.empty:
+        # Order basins by total area (largest first) so the list mirrors the
+        # catchment-bar ordering the user sees in the graphs.
+        basins = df.groupby("basin")["area"].sum().sort_values(ascending=False).index.tolist()
+    else:
+        basins = list(state.hybasin_list.value)
     year_min = state.year_start.value
     year_max = state.year_end.value
     current = state.sett_timespan.value
@@ -58,7 +64,7 @@ def SettingsCard(state):
                 items=[{"text": str(b), "value": b} for b in basins],
                 label="Catchments",
                 multiple=True,
-                chips=True,
+                small_chips=True,
                 deletable_chips=True,
                 dense=True,
                 outlined=True,
