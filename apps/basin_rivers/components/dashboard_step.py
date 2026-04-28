@@ -110,11 +110,7 @@ def DashboardStep(state, gee_interface, legend_visible=None, legend_data=None, s
             state.zonal_df.value = df
             state.selected_var.value = "all"
 
-            seed_ids = (
-                state.selected_basins.value
-                if state.method.value == "filter" and state.selected_basins.value
-                else state.hybasin_list.value
-            )
+            seed_ids = state.hybasin_list.value
             seed_strs = [str(b) for b in seed_ids]
             if len(seed_strs) > MAX_CATCH_DISPLAY:
                 totals = (
@@ -140,11 +136,7 @@ def DashboardStep(state, gee_interface, legend_visible=None, legend_data=None, s
     )
 
     def _start_stats():
-        ids = (
-            state.selected_basins.value
-            if state.method.value == "filter"
-            else state.hybasin_list.value
-        )
+        ids = state.hybasin_list.value
         if not ids:
             notifications.warning("Trace the watershed first.")
             return

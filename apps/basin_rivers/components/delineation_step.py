@@ -9,7 +9,6 @@ from dataclasses import asdict as _asdict
 from dataclasses import dataclass
 
 import ee
-import reacton.ipyvuetify as rv
 import solara
 from pysepal.solara.components.export import (
     ExportLauncher,
@@ -190,33 +189,6 @@ def DelineationStep(
         )
 
         if state.hybasin_list.value:
-            rv.Select(
-                v_model=state.method.value,
-                on_v_model=state.method.set,
-                items=[
-                    {"text": "All upstream basins", "value": "all"},
-                    {"text": "Filter specific basins", "value": "filter"},
-                ],
-                label="Basin selection",
-                hint="Controls which basins are included in the statistics",
-                persistent_hint=True,
-                dense=True,
-                outlined=True,
-            )
-
-            if state.method.value == "filter":
-                rv.Select(
-                    v_model=state.selected_basins.value,
-                    on_v_model=state.selected_basins.set,
-                    items=[{"text": str(h), "value": h} for h in state.hybasin_list.value],
-                    label="Select basins",
-                    multiple=True,
-                    small_chips=True,
-                    deletable_chips=True,
-                    dense=True,
-                    outlined=True,
-                )
-
             DashboardStep(state, gee_interface, legend_visible, legend_data, sepal_map)
 
             export_sources: tuple[ExportSource, ...] = ()
@@ -261,7 +233,8 @@ def DelineationStep(
 
             ExportLauncher(
                 sources=export_sources,
-                label="Export results",
+                label="Export layers",
+                icon="mdi-cloud-download",
                 button_text=True,
                 small=True,
                 block=True,

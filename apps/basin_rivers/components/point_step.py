@@ -35,7 +35,6 @@ def PointStep(state, sepal_map):
                 state.lat.set(lat)
                 state.lon.set(lon)
                 _update_marker(lat, lon)
-                notifications.success(f"Outlet set: {lat:.6f}, {lon:.6f}")
                 logger.debug("Outlet set via click: %s, %s", lat, lon)
 
         sepal_map.on_interaction(handle)
@@ -52,7 +51,6 @@ def PointStep(state, sepal_map):
         state.lat.set(lat)
         state.lon.set(lon)
         _update_marker(lat, lon)
-        notifications.success(f"Outlet set: {lat:.6f}, {lon:.6f}")
         logger.debug("Outlet set manually: %s, %s", lat, lon)
 
     with solara.Column():
