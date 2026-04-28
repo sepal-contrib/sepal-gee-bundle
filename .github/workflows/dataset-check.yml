@@ -1,0 +1,109 @@
+name: dataset-check
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install bundle
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Authenticate Earth Engine
+        env:
+          GEE_SERVICE_ACCOUNT_KEY: ${{ secrets.GEE_SERVICE_ACCOUNT_KEY }}
+        run: |
+          if [ -z "$GEE_SERVICE_ACCOUNT_KEY" ]; then
+            echo "::error::GEE_SERVICE_ACCOUNT_KEY secret is not set"
+            exit 1
+          fi
+          mkdir -p "$HOME/.config/earthengine"
+          printf '%s' "$GEE_SERVICE_ACCOUNT_KEY" > "$HOME/.config/earthengine/service-account.json"
+
+      - name: Run dataset check
+        id: check
+        env:
+          EE_SERVICE_ACCOUNT_FILE: ${{ runner.workspace }}/../home/runner/.config/earthengine/service-account.json
+        run: |
+          set +e
+          python -m apps._commons.dataset_check > report.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          {
+            echo "report<<EOF"
+            cat report.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or update tracking issue (stale)
+        if: steps.check.outputs.exit_code != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "[dataset-check] staleness report";
+            const body = `${{ steps.check.outputs.report }}`;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "dataset-check",
+              per_page: 100,
+            });
+            const existing = issues.find((i) => i.title === title);
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["dataset-check"],
+              });
+            }
+
+      - name: Close tracking issue (all green)
+        if: steps.check.outputs.exit_code == '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "[dataset-check] staleness report";
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "dataset-check",
+              per_page: 100,
+            });
+            const existing = issues.find((i) => i.title === title);
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: "closed",
+              });
+            }
+
+      - name: Fail step on staleness
+        if: steps.check.outputs.exit_code != '0'
+        run: exit ${{ steps.check.outputs.exit_code }}

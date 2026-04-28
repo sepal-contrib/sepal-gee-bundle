@@ -17,8 +17,10 @@ Bundle of lightweight GEE-based SEPAL applications sharing a single Solara conta
 
 ## Architecture Rules
 
-- **Fully independent apps** — no shared state between routes. Each app has its own `page.py`, `model.py`, and `scripts/`.
-- **No cross-app imports** — apps must never import from each other. pysepal is the shared layer.
+- **Independent apps** — no shared UI or state between routes. Each app has its own `page.py`, `model.py`, `components/`, and `scripts/`.
+- **No cross-app imports of UI or state** — apps must never import another app's `page.py`, `model.py`, or `components/`. State and UI stay independent.
+- **Shared pure logic lives in `apps/_commons/`** — pure constants and pure functions (dataset IDs, class codes, color palettes, classification helpers, SLD builders, legend templates) belong here, not duplicated across apps. No state, no I/O, no UI components, and `_commons` must never import from `apps/<app_name>/`.
+- **Promote stable commons to pysepal** — once a `_commons` module is field-tested and reusable beyond this bundle, graduate it into `pysepal` (e.g. `pysepal.gee.gfc`).
 - **`pyproject.toml` is the dependency source of truth** — no `requirements.txt`.
 - **Follow the `pysepal-app` skill** for all component, state, GEE, layout, ipyvuetify, logging, and i18n patterns. That skill is the single source of truth for how pysepal apps are built.
 
@@ -53,7 +55,7 @@ Use `pre-commit` with at minimum ruff hooks. Configuration lives in `.pre-commit
 
 - **Conda env name**: `sepal-gee-bundle`
 - **Always use the conda env** — never system Python or `pip install --user`.
-- Install: `conda create -n sepal-gee-bundle python=3.12 pip rasterio gdal pyproj -c conda-forge`
+- Install: `conda create -n sepal-gee-bundle python=3.12 pip -c conda-forge`
 - Install project + dev deps: `conda run -n sepal-gee-bundle pip install -e ".[dev]"`
 - Run tests: `conda run -n sepal-gee-bundle pytest tests/ -v`
 - Run ruff: `conda run -n sepal-gee-bundle ruff check . && conda run -n sepal-gee-bundle ruff format .`
@@ -69,7 +71,7 @@ sepal-gee-bundle/
 ├── .env.example                    # Template for local dev config
 ├── Dockerfile                      # micromamba + supervisord
 ├── docker-compose.yml
-├── supervisord.conf                # Runs solara with --root-path=/sepal-gee-bundle
+├── supervisord.conf                # Runs solara with --root-path=/api/app-launcher/sepal-gee-bundle
 ├── run_solara.sh                   # Local dev launcher (reads .env)
 ├── logging_config.toml
 ├── .env                            # Local dev config (not committed)
@@ -77,6 +79,8 @@ sepal-gee-bundle/
 │   ├── conftest.py                 # Shared fixtures (mock_gee_interface, etc.)
 │   └── apps/{gfc,basin_rivers,coverage_analysis,fcdm}/
 ├── apps/
+│   ├── _commons/                   # Shared pure-logic primitives (no state, no UI)
+│   │   └── gfc.py                  # GFC dataset id, class codes, palette, SLD, legend, classify_gfc
 │   ├── gfc/                        # ✅ MIGRATED
 │   │   ├── CLAUDE.md
 │   │   ├── page.py                 # GfcPage — wired to components
@@ -165,7 +169,7 @@ docker compose build
 docker compose up -d
 ```
 
-Container exposes port 8765 with `--root-path=/sepal-gee-bundle`.
+Container exposes port 8765 with `--root-path=/api/app-launcher/sepal-gee-bundle` (matches the SEPAL gateway prefix used by app-launcher).
 
 ## Git Rules
 
