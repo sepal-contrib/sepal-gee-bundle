@@ -83,6 +83,7 @@ def BasinRiversPage():
         right_panel_config=right_panel_config,
         right_panel_content=right_panel_content,
         right_panel_open=True,
+        is_pinned=False,
         theme_state=theme_state,
     )
 

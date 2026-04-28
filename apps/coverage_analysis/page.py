@@ -5,11 +5,15 @@ import logging
 import solara
 from pysepal.logger import setup_logging
 from pysepal.mapping import SepalMap
-from pysepal.sepalwidgets.vue_app import MapApp, ThemeToggle
-from pysepal.solara import get_current_gee_interface, setup_theme_colors, with_sepal_sessions
+from pysepal.sepalwidgets.vue_app import MapApp
+from pysepal.solara import (
+    get_current_gee_interface,
+    get_current_theme_state,
+    setup_theme_colors,
+    with_sepal_sessions,
+)
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
-from solara.lab.components.theming import theme
 
 from .components import AoiStep, DashboardStep, ExportStep, VisualizeStep
 from .model import CoverageState
@@ -51,13 +55,12 @@ def CoverageAnalysisPage():
     """Satellite coverage and NDVI analysis."""
     setup_theme_colors()
     NotificationProvider()
-    theme_toggle = ThemeToggle()
-    theme_toggle.observe(lambda e: setattr(theme, "dark", e["new"]), "dark")
+    theme_state = get_current_theme_state()
     gee_interface = get_current_gee_interface()
 
     state = solara.use_memo(lambda: CoverageState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(gee_interface=gee_interface, fullscreen=True, theme_toggle=theme_toggle),
+        lambda: SepalMap(gee_interface=gee_interface, fullscreen=True, theme_state=theme_state),
         [id(gee_interface)],
     )
 
@@ -116,7 +119,8 @@ def CoverageAnalysisPage():
         right_panel_config=right_panel_config,
         right_panel_content=right_panel_content,
         right_panel_open=True,
-        theme_toggle=[theme_toggle],
+        is_pinned=False,
+        theme_state=theme_state,
     )
 
     LegendComponent(
