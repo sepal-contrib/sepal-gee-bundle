@@ -10,10 +10,10 @@ import ipyvuetify as v
 import reacton.ipyvuetify as rv
 import solara
 import traitlets
+from pysepal.solara import get_current_sepal_client
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
 
-from apps.gee_source.params import RESULT_DIR
 from apps.gee_source.scripts import sanitize_filename, save_code
 from apps.gee_source.scripts.highlight import highlight_css
 
@@ -76,6 +76,8 @@ def SaveControls(state):
     cancel_reason = solara.use_ref(None)
     has_code = bool(state.raw_code.value)
     clipboard = solara.use_memo(lambda: _ClipboardCopier(), [])
+    sepal_client = get_current_sepal_client()
+    result_path = getattr(sepal_client, "results_path", "your SEPAL module results folder")
 
     def _copy_to_clipboard():
         if not has_code:
@@ -87,7 +89,9 @@ def SaveControls(state):
 
     @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
     async def save_task(request: SaveRequest):
-        path = await asyncio.to_thread(save_code, request.code, request.filename)
+        path = await asyncio.to_thread(
+            save_code, request.code, request.filename, sepal_client=sepal_client
+        )
         return str(path)
 
     def _sync():
@@ -109,6 +113,9 @@ def SaveControls(state):
         if not has_code:
             notifications.warning("Nothing to save — extract a source first.")
             return
+        if sepal_client is None:
+            notifications.error("SEPAL session is not available; cannot save user files.")
+            return
         cleaned = sanitize_filename(state.filename.value or "")
         state.filename.set(cleaned)
         cancel_reason.current = None
@@ -121,7 +128,7 @@ def SaveControls(state):
             v_model=state.filename.value,
             on_v_model=state.filename.set,
             label="Filename (no extension)",
-            hint=f"Will be saved as <name>.js under {RESULT_DIR}",
+            hint=f"Will be saved as <name>.js under {result_path}",
             persistent_hint=True,
             outlined=True,
             dense=True,

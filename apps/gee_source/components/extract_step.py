@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from pathlib import Path
+from urllib.parse import urlparse
 
 import reacton.ipyvuetify as rv
 import solara
@@ -19,6 +19,12 @@ from apps.gee_source.scripts import (
 )
 
 logger = logging.getLogger("sepal_gee_bundle.gee_source")
+
+
+def _suggest_filename(app_url: str) -> str:
+    """Build a filename suggestion from an Earth Engine App URL."""
+    tail = urlparse(app_url).path.rstrip("/").rsplit("/", 1)[-1]
+    return sanitize_filename(tail or app_url)
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,7 +52,7 @@ def ExtractStep(state):
             task.step("Highlighting source")
             html = highlight_javascript(raw) if raw else ""
 
-        suggested = sanitize_filename(Path(request.app_url).name)
+        suggested = _suggest_filename(request.app_url)
         return raw, html, suggested
 
     def _sync():

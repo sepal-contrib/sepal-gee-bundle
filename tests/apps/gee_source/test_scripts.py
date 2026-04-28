@@ -200,28 +200,65 @@ class TestSanitizeFilename:
 # save_code                                                                    #
 # --------------------------------------------------------------------------- #
 
+class FakeSepalClient:
+    """Small in-memory fake for SepalClient user-files calls."""
+
+    results_path = "module_results/sepal_gee_bundle.gee_source"
+
+    def __init__(self):
+        self.created_dirs = []
+        self.files = {}
+
+    def get_remote_dir(self, folder, parents=False):
+        remote_folder = str(folder).strip("/")
+        self.created_dirs.append((remote_folder, parents))
+        return remote_folder
+
+    def list_files(self, folder="/", extensions=None):
+        prefix = f"{str(folder).rstrip('/')}/"
+        return {
+            "files": [
+                {"name": path.rsplit("/", 1)[-1], "path": path}
+                for path in sorted(self.files)
+                if path.startswith(prefix)
+            ]
+        }
+
+    def set_file(self, file_path, content, overwrite=False):
+        if file_path in self.files and not overwrite:
+            raise AssertionError("save_code should preflight existing files")
+        payload = content.encode("utf-8") if isinstance(content, str) else content
+        self.files[file_path] = payload
+        return {}
+
 
 class TestSaveCode:
-    def test_writes_file_with_js_extension(self, tmp_path):
-        path = save_code("console.log('hi');", "demo", result_dir=tmp_path)
-        assert path == tmp_path / "demo.js"
-        assert path.read_text(encoding="utf-8") == "console.log('hi');"
+    def test_writes_file_with_js_extension(self):
+        sepal_client = FakeSepalClient()
 
-    def test_creates_result_dir_if_missing(self, tmp_path):
-        target = tmp_path / "nested" / "dir"
-        path = save_code("x;", "a", result_dir=target)
-        assert path.exists()
-        assert path.parent == target
+        path = save_code("console.log('hi');", "demo", sepal_client=sepal_client)
 
-    def test_sanitizes_filename_before_writing(self, tmp_path):
-        path = save_code("x;", "my app!", result_dir=tmp_path)
-        assert path.name == "my_app.js"
+        assert path == "module_results/sepal_gee_bundle.gee_source/demo.js"
+        assert sepal_client.files[path] == b"console.log('hi');"
+        assert sepal_client.created_dirs == [
+            ("module_results/sepal_gee_bundle.gee_source", True)
+        ]
 
-    def test_refuses_to_overwrite(self, tmp_path):
-        save_code("first", "demo", result_dir=tmp_path)
+    def test_sanitizes_filename_before_writing(self):
+        sepal_client = FakeSepalClient()
+        path = save_code("x;", "my app!", sepal_client=sepal_client)
+        assert path.endswith("/my_app.js")
+
+    def test_refuses_to_overwrite(self):
+        sepal_client = FakeSepalClient()
+        save_code("first", "demo", sepal_client=sepal_client)
         with pytest.raises(ValueError, match="already exists"):
-            save_code("second", "demo", result_dir=tmp_path)
+            save_code("second", "demo", sepal_client=sepal_client)
 
-    def test_refuses_empty_code(self, tmp_path):
+    def test_refuses_empty_code(self):
         with pytest.raises(ValueError, match="empty"):
-            save_code("", "demo", result_dir=tmp_path)
+            save_code("", "demo", sepal_client=FakeSepalClient())
+
+    def test_requires_sepal_client(self):
+        with pytest.raises(ValueError, match="SEPAL session"):
+            save_code("x;", "demo", sepal_client=None)

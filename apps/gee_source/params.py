@@ -1,12 +1,6 @@
 """Static parameters for the GEE Source app."""
 
-from pathlib import Path
-
-# Root folder where every SEPAL module writes its results.
-MODULE_RESULTS_DIR = Path.home() / "module_results"
-
-# Per-app result directory — all extracted .js files land here.
-RESULT_DIR = MODULE_RESULTS_DIR / "gee_source"
+# Extracted .js files are written through SepalClient under its results_path.
 
 # Network timeout for HTTP calls against the Earth Engine Apps hosts, in seconds.
 HTTP_TIMEOUT = 30

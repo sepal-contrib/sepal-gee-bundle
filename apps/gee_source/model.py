@@ -11,7 +11,7 @@ class GeeSourceState:
         filename: The sanitized filename (without extension) used when saving.
         raw_code: The raw JavaScript source extracted from the app, if any.
         highlighted_html: Syntax-highlighted HTML for the extracted code.
-        saved_path: Absolute path of the most recent save, if any.
+        saved_path: SEPAL user-files path of the most recent save, if any.
     """
 
     def __init__(self):
