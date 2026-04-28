@@ -19,16 +19,9 @@ level     = "DEBUG"
 formatter = "colored"
 stream    = "ext://sys.stderr"
 
-[handlers.file]
-class     = "logging.FileHandler"
-level     = "DEBUG"
-formatter = "colored"
-filename  = "basin_rivers.log"
-mode      = "w"
-
 [loggers.sepal_gee_bundle.basin_rivers]
 level     = "DEBUG"
-handlers  = ["console", "file"]
+handlers  = ["console"]
 propagate = false
 
 [root]
