@@ -1,14 +1,24 @@
-"""Dashboard step: button that opens a large modal with the GFC charts."""
+"""Dashboard step: computes area statistics on demand and opens the modal."""
 
+from dataclasses import dataclass
 from io import StringIO
 
 import ipyvuetify as ipv
 import reacton.ipyvuetify as rv
 import solara
-from reacton import ipyvue
+from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
+from pysepal.solara.notifications import use_notifications
 from traitlets import Int, Unicode
 
+from apps.gfc.scripts import compute_area_stats, parse_area_stats
+
 from .dashboard import LossTrend, OverallPie, SummaryCard
+
+
+@dataclass(frozen=True, slots=True)
+class StatsRequest:
+    result_image: object  # ee.Image
+    aoi_fc: object  # ee.FeatureCollection
 
 
 class _DialogResizer(ipv.VuetifyTemplate):
@@ -47,9 +57,51 @@ def _csv_bytes(rows: list[dict]) -> bytes:
 
 
 @solara.component
-def DashboardStep(state, legend_visible=None, sepal_map=None):
+def DashboardStep(state, gee_interface, legend_visible=None, sepal_map=None):
+    notifications = use_notifications()
     open_dialog = solara.use_reactive(False)
     resizer = solara.use_memo(lambda: _DialogResizer(), [])
+    compute_cancel = solara.use_ref(None)
+
+    @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
+    async def compute_task(request: StatsRequest):
+        with notifications.track("Computing area statistics", total_steps=2) as task:
+            task.step("Running reduceRegion on GEE")
+            stats_obj = compute_area_stats(request.result_image, request.aoi_fc)
+            raw = await gee_interface.get_info_async(stats_obj)
+            task.step("Parsing results")
+            return parse_area_stats(raw)
+
+    def _sync_compute():
+        if compute_task.pending or compute_task.cancelled:
+            return
+        if compute_task.error:
+            notifications.error(f"Statistics failed: {compute_task.exception}")
+            return
+        if compute_task.finished and compute_task.value is not None:
+            state.stats_rows.set(compute_task.value)
+            notifications.success(
+                f"Area statistics computed ({len(compute_task.value)} classes)"
+            )
+            open_dialog.set(True)
+
+    solara.use_effect(
+        _sync_compute,
+        [compute_task.pending, compute_task.cancelled, compute_task.finished, compute_task.error],
+    )
+
+    def _start_compute():
+        if state.result_image.value is None or state.aoi.value is None:
+            notifications.warning("Run visualization first.")
+            return
+        compute_cancel.current = None
+        state.stats_rows.set([])
+        compute_task(
+            StatsRequest(
+                result_image=state.result_image.value,
+                aoi_fc=state.aoi.value.feature_collection,
+            )
+        )
 
     rows = state.stats_rows.value
     has_data = bool(rows)
@@ -65,25 +117,18 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
 
     solara.use_effect(_on_open_change, [open_dialog.value])
 
-    def _auto_open():
-        if has_data and not open_dialog.value:
-            open_dialog.set(True)
-
-    # Re-open the modal every time fresh stats arrive.
-    solara.use_effect(_auto_open, [id(rows) if has_data else None])
-
-    btn = rv.Btn(
-        color="primary",
-        block=True,
-        small=True,
-        class_="mt-2",
-        disabled=not has_data,
-        children=[
-            rv.Icon(left=True, small=True, children=["mdi-view-dashboard"]),
-            "Open dashboard",
-        ],
+    compute_btn = use_task_button(
+        compute_task, on_start=_start_compute, cancel_reason_ref=compute_cancel
     )
-    ipyvue.use_event(btn, "click", lambda *_: open_dialog.set(True))
+
+    TaskButtonComponent(
+        label="Compute & show dashboard",
+        **compute_btn,
+        icon="mdi-view-dashboard",
+        external_busy=state.result_image.value is None,
+        small=True,
+        block=True,
+    )
 
     with rv.Dialog(
         v_model=open_dialog.value and has_data,
@@ -98,7 +143,7 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
                 rv.Html(
                     tag="span",
                     class_="text-h6",
-                    children=["GFC — Dashboard"],
+                    children=["Global Forest Change — Dashboard"],
                 )
                 rv.Spacer()
                 solara.Button(
