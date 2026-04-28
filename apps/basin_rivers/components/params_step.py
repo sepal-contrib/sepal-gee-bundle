@@ -13,7 +13,8 @@ def ParamsStep(state):
     """HydroSHEDS level, year range, and tree cover threshold inputs."""
     level_items = [{"text": f"Level {lv}", "value": lv} for lv in HYBAS_LEVELS]
     year_items = [
-        {"text": str(2000 + i), "value": 2000 + i} for i in range(GFC_MIN_YEAR, GFC_MAX_YEAR + 1)
+        {"text": str(2000 + i), "value": 2000 + i}
+        for i in range(GFC_MIN_YEAR, GFC_MAX_YEAR + 1)
     ]
 
     current = state.treecover.value
@@ -40,8 +41,6 @@ def ParamsStep(state):
             label="HydroSHEDS Level",
             hint="Higher = smaller catchments",
             persistent_hint=True,
-            dense=True,
-            outlined=True,
         )
 
         rv.Select(
@@ -49,8 +48,6 @@ def ParamsStep(state):
             on_v_model=lambda v: state.year_start.set(int(v)),
             items=year_items,
             label="Start year",
-            dense=True,
-            outlined=True,
         )
 
         rv.Select(
@@ -58,8 +55,6 @@ def ParamsStep(state):
             on_v_model=lambda v: state.year_end.set(int(v)),
             items=year_items,
             label="End year",
-            dense=True,
-            outlined=True,
         )
 
         solara.Text("Tree cover threshold (%)", style={"opacity": "0.7"})

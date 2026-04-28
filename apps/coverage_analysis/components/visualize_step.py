@@ -67,7 +67,9 @@ class VizRequest:
 
 
 @solara.component
-def VisualizeStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=None):
+def VisualizeStep(
+    state, sepal_map, gee_interface, legend_data=None, legend_visible=None
+):
     """Build the multi-sensor collection and render the chosen measure in one click."""
     notifications = use_notifications()
     cancel_reason = solara.use_ref(None)
@@ -123,7 +125,11 @@ def VisualizeStep(state, sepal_map, gee_interface, legend_data=None, legend_visi
                 )
                 previous_layers.current.append(key)
 
-        logger.info("Coverage visualization added: %d layers from %d images", len(band_names), size)
+        logger.info(
+            "Coverage visualization added: %d layers from %d images",
+            len(band_names),
+            size,
+        )
         return image, band_names
 
     def _sync_viz():
@@ -166,7 +172,9 @@ def VisualizeStep(state, sepal_map, gee_interface, legend_data=None, legend_visi
         if not state.sensors.value:
             notifications.warning("Select at least one sensor.")
             return
-        if not (_valid_date(state.start_date.value) and _valid_date(state.end_date.value)):
+        if not (
+            _valid_date(state.start_date.value) and _valid_date(state.end_date.value)
+        ):
             notifications.warning("Dates must be YYYY-MM-DD.")
             return
         if state.start_date.value >= state.end_date.value:
@@ -191,7 +199,9 @@ def VisualizeStep(state, sepal_map, gee_interface, legend_data=None, legend_visi
             )
         )
 
-    btn_props = use_task_button(viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason)
+    btn_props = use_task_button(
+        viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason
+    )
 
     with solara.Column():
         rv.TextField(
@@ -216,8 +226,6 @@ def VisualizeStep(state, sepal_map, gee_interface, legend_data=None, legend_visi
             multiple=True,
             small_chips=True,
             deletable_chips=True,
-            dense=True,
-            outlined=True,
         )
         rv.Switch(
             v_model=state.surface_reflectance.value,
@@ -236,8 +244,6 @@ def VisualizeStep(state, sepal_map, gee_interface, legend_data=None, legend_visi
             on_v_model=state.measure.set,
             items=MEASURE_ITEMS,
             label="Measure",
-            dense=True,
-            outlined=True,
         )
         rv.Switch(
             v_model=state.annual.value,

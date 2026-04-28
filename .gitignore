@@ -15,3 +15,7 @@ build/
 # Superpowers skill scratch and docs
 .superpowers/
 docs/superpowers/
+
+# Local-only Claude context files (kept on disk, not pushed)
+CLAUDE.md
+**/CLAUDE.md

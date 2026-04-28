@@ -25,8 +25,6 @@ def ForestStep(state, gee_interface=None):
             on_v_model=state.forest_map.set,
             items=FOREST_MAP_ITEMS,
             label="Forest mask source",
-            dense=True,
-            outlined=True,
         )
 
         if forest_map == "gfc":
@@ -87,8 +85,6 @@ def ForestStep(state, gee_interface=None):
                 on_v_model=lambda v: state.forest_map_year.set(int(v)),
                 items=year_items,
                 label="Forest mask baseline year",
-                dense=True,
-                outlined=True,
                 class_="mt-4",
             )
 
@@ -115,7 +111,5 @@ def ForestStep(state, gee_interface=None):
             multiple=True,
             small_chips=True,
             deletable_chips=True,
-            dense=True,
-            outlined=True,
             class_="mt-2",
         )

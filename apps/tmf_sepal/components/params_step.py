@@ -119,9 +119,13 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             )
         )
 
-    btn_props = use_task_button(viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason)
+    btn_props = use_task_button(
+        viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason
+    )
 
-    year_items = [{"text": str(y), "value": y} for y in range(TMF_MIN_YEAR, TMF_MAX_YEAR + 1)]
+    year_items = [
+        {"text": str(y), "value": y} for y in range(TMF_MIN_YEAR, TMF_MAX_YEAR + 1)
+    ]
     type_items = [{"text": t["label"], "value": t["value"]} for t in TMF_TYPES]
 
     with solara.Column():
@@ -130,8 +134,6 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             on_v_model=state.tmf_type.set,
             items=type_items,
             label="TMF layer",
-            dense=True,
-            outlined=True,
             class_="mt-2",
         )
 
@@ -140,8 +142,6 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             on_v_model=lambda v: state.year_start.set(int(v)),
             items=year_items,
             label="Start year",
-            dense=True,
-            outlined=True,
         )
 
         rv.Select(
@@ -149,8 +149,6 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             on_v_model=lambda v: state.year_end.set(int(v)),
             items=year_items,
             label="End year",
-            dense=True,
-            outlined=True,
         )
 
         TaskButtonComponent(

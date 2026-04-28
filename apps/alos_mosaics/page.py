@@ -20,6 +20,8 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
+from apps._widgets import AboutOnceDialog
+
 from .components import AoiStep, ExportStep, VizStep
 from .model import AlosMosaicsState
 
@@ -68,6 +70,7 @@ def AboutContent():
 @with_sepal_sessions(module_name="sepal_gee_bundle.alos_mosaics")
 def AlosMosaicsPage():
     """ALOS PALSAR yearly mosaics visualization and export."""
+    solara.Title("ALOS PALSAR Mosaics")
     setup_theme_colors()
     NotificationProvider()
     theme_state = get_current_theme_state()
@@ -127,10 +130,10 @@ def AlosMosaicsPage():
 
     MapApp.element(
         app_title="ALOS mosaics",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/alos_mosaics",
         app_icon="mdi-satellite-variant",
         main_map=[sepal_map],
         steps_data=steps_data,
-        initial_step=1,
         right_panel_config=right_panel_config,
         right_panel_content=right_panel_content,
         right_panel_open=True,
@@ -141,4 +144,10 @@ def AlosMosaicsPage():
     LegendComponent(
         legend_data=legend_data.value,
         visible=legend_visible.value,
+    )
+
+    AboutOnceDialog(
+        storage_key="sepal-gee-bundle:alos-mosaics:about-dismissed",
+        title="ALOS PALSAR Mosaics",
+        markdown_text=ABOUT_TEXT,
     )

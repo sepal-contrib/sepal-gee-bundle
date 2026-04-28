@@ -87,8 +87,6 @@ def ExportStep(state, gee_interface):
             multiple=True,
             small_chips=True,
             deletable_chips=True,
-            dense=True,
-            outlined=True,
         )
         rv.Select(
             v_model=state.temps.value,
@@ -98,8 +96,6 @@ def ExportStep(state, gee_interface):
             multiple=True,
             small_chips=True,
             deletable_chips=True,
-            dense=True,
-            outlined=True,
         )
         ExportLauncher(
             sources=sources,

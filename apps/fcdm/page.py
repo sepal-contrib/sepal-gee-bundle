@@ -14,6 +14,8 @@ from pysepal.solara import (
 )
 from pysepal.solara.notifications import NotificationProvider
 
+from apps._widgets import AboutOnceDialog
+
 from .components import AoiStep, ForestStep, ParamsStep, RunStep
 from .model import FcdmState
 
@@ -55,6 +57,7 @@ def AboutContent():
 @with_sepal_sessions(module_name="sepal_gee_bundle.fcdm")
 def FcdmPage():
     """Forest Canopy Disturbance Monitoring application."""
+    solara.Title("Forest Canopy Disturbance Monitoring")
     setup_theme_colors()
     NotificationProvider()
     theme_state = get_current_theme_state()
@@ -114,13 +117,19 @@ def FcdmPage():
 
     MapApp.element(
         app_title="Forest Canopy Disturbance Monitoring",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/fcdm",
         app_icon="mdi-tree-outline",
         main_map=[sepal_map],
         steps_data=steps_data,
-        initial_step=1,
         right_panel_config=right_panel_config,
         right_panel_content=right_panel_content,
         right_panel_open=True,
         is_pinned=False,
         theme_state=theme_state,
+    )
+
+    AboutOnceDialog(
+        storage_key="sepal-gee-bundle:fcdm:about-dismissed",
+        title="Forest Canopy Disturbance Monitoring",
+        markdown_text=ABOUT_TEXT,
     )

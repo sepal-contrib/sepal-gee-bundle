@@ -15,6 +15,8 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
+from apps._widgets import AboutOnceDialog
+
 from .components import AoiStep, ExportStep, ParamsStep, StatsStep
 from .model import TmfSepalState
 from .params import TMF_VERSION_YEAR
@@ -63,6 +65,7 @@ def AboutContent():
 @with_sepal_sessions(module_name="sepal_gee_bundle.tmf_sepal")
 def TmfSepalPage():
     """Tropical Moist Forests visualization and export."""
+    solara.Title("Tropical Moist Forests")
     setup_theme_colors()
     NotificationProvider()
     theme_state = get_current_theme_state()
@@ -127,10 +130,10 @@ def TmfSepalPage():
 
     MapApp.element(
         app_title="Tropical Moist Forests",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/tmf_sepal",
         app_icon="mdi-tree",
         main_map=[sepal_map],
         steps_data=steps_data,
-        initial_step=1,
         right_panel_config=right_panel_config,
         right_panel_content=right_panel_content,
         right_panel_open=True,
@@ -141,4 +144,10 @@ def TmfSepalPage():
     LegendComponent(
         legend_data=legend_data.value,
         visible=legend_visible.value,
+    )
+
+    AboutOnceDialog(
+        storage_key="sepal-gee-bundle:tmf-sepal:about-dismissed",
+        title="Tropical Moist Forests",
+        markdown_text=ABOUT_TEXT,
     )

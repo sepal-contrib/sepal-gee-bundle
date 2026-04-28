@@ -15,6 +15,8 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
+from apps._widgets import AboutOnceDialog
+
 from .components import AoiStep, ParamsStep, ResultsStep
 from .model import GfcState
 
@@ -68,6 +70,7 @@ def AboutContent():
 @with_sepal_sessions(module_name="sepal_gee_bundle.gfc")
 def GfcPage():
     """Global Forest Change mask visualization and export."""
+    solara.Title("Global Forest Change")
     setup_theme_colors()
     NotificationProvider()
     theme_state = get_current_theme_state()
@@ -127,10 +130,10 @@ def GfcPage():
 
     MapApp.element(
         app_title="Global Forest Change",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/gfc",
         app_icon="mdi-forest",
         main_map=[sepal_map],
         steps_data=steps_data,
-        initial_step=1,
         right_panel_config=right_panel_config,
         right_panel_content=right_panel_content,
         right_panel_open=True,
@@ -141,4 +144,10 @@ def GfcPage():
     LegendComponent(
         legend_data=legend_data.value,
         visible=legend_visible.value,
+    )
+
+    AboutOnceDialog(
+        storage_key="sepal-gee-bundle:gfc:about-dismissed",
+        title="Global Forest Change",
+        markdown_text=ABOUT_TEXT,
     )
