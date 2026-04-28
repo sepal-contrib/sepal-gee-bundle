@@ -1,7 +1,10 @@
 """Date ranges and algorithm-parameter step for FCDM."""
 
+from datetime import date
+
 import reacton.ipyvuetify as rv
 import solara
+import solara.lab
 
 from apps.fcdm.params import (
     MAX_CLEANING_OFFSET,
@@ -10,93 +13,140 @@ from apps.fcdm.params import (
     MIN_FILTER_RADIUS,
 )
 
+# Lower bound covers Landsat-5; upper bound is "today" so users can pick a
+# very recent end date right after a satellite acquisition.
+_DATE_MIN = "1984-01-01"
+
+
+def _str_to_date(s: str) -> date | None:
+    if not s or len(s) < 10:
+        return None
+    try:
+        return date.fromisoformat(s)
+    except ValueError:
+        return None
+
+
+def _date_to_str(d: date | None) -> str:
+    return d.isoformat() if d else ""
+
+
+def _sepal_slider(reactive, label, *, min, max, step=1, cast=int, fmt=str, suffix=""):
+    """Slim slider mimicking SEPAL's UI: label, slider, editable numeric field."""
+    value = reactive.value
+
+    def _set(v, r=reactive, c=cast, lo=min, hi=max):
+        try:
+            n = c(float(v))
+        except (TypeError, ValueError):
+            return
+        if n < lo or n > hi:
+            return
+        r.set(n)
+
+    with rv.Html(
+        tag="div",
+        class_="mt-2 mb-1",
+        style_="display: flex; align-items: center; gap: 12px;",
+    ):
+        rv.Html(
+            tag="span",
+            style_="flex: 0 0 auto; min-width: 140px; font-size: 0.8rem; opacity: 0.7;",
+            children=[label],
+        )
+        rv.Slider(
+            v_model=value,
+            on_v_model=_set,
+            min=min,
+            max=max,
+            step=step,
+            hide_details=True,
+            dense=True,
+            thumb_label=False,
+            class_="pt-0 mt-0",
+            style_="flex: 1 1 auto;",
+        )
+        rv.TextField(
+            v_model=fmt(value),
+            on_v_model=_set,
+            type="number",
+            suffix=suffix.strip() or None,
+            hide_details=True,
+            dense=True,
+            single_line=True,
+            style_="flex: 0 0 auto; max-width: 70px; font-size: 0.75rem;",
+            class_="pt-0 mt-0",
+        )
+
 
 @solara.component
 def ParamsStep(state):
     """Reference / analysis date pickers and DDR / kernel parameters."""
+    today_iso = date.today().isoformat()
+
+    def _date_field(reactive, label):
+        return solara.lab.InputDate(
+            value=_str_to_date(reactive.value),
+            on_value=lambda d, r=reactive: r.set(_date_to_str(d)),
+            label=label,
+            optional=True,
+            min_date=_DATE_MIN,
+            max_date=today_iso,
+            date_format="%Y-%m-%d",
+            dense=True,
+            classes=["mb-2"],
+        )
+
     with solara.Column():
         solara.Text("Reference period (baseline)", style={"font-weight": "bold"})
-        rv.TextField(
-            v_model=state.reference_start.value,
-            on_v_model=state.reference_start.set,
-            label="Start date (YYYY-MM-DD)",
-            placeholder="2015-01-01",
-            dense=True,
-            outlined=True,
-        )
-        rv.TextField(
-            v_model=state.reference_end.value,
-            on_v_model=state.reference_end.set,
-            label="End date (YYYY-MM-DD)",
-            placeholder="2015-12-31",
-            dense=True,
-            outlined=True,
-        )
+        _date_field(state.reference_start, "Start date")
+        _date_field(state.reference_end, "End date")
 
         solara.Text("Analysis period", style={"font-weight": "bold"}, classes=["mt-3"])
-        rv.TextField(
-            v_model=state.analysis_start.value,
-            on_v_model=state.analysis_start.set,
-            label="Start date (YYYY-MM-DD)",
-            placeholder="2020-01-01",
-            dense=True,
-            outlined=True,
-        )
-        rv.TextField(
-            v_model=state.analysis_end.value,
-            on_v_model=state.analysis_end.set,
-            label="End date (YYYY-MM-DD)",
-            placeholder="2020-12-31",
-            dense=True,
-            outlined=True,
-        )
+        _date_field(state.analysis_start, "Start date")
+        _date_field(state.analysis_end, "End date")
 
         solara.Text("Cloud mask", style={"font-weight": "bold"}, classes=["mt-3"])
-        rv.Slider(
-            v_model=state.cloud_buffer.value,
-            on_v_model=lambda v: state.cloud_buffer.set(int(v)),
-            label="Cloud buffer (m)",
+        _sepal_slider(
+            state.cloud_buffer,
+            "Cloud buffer",
             min=0,
             max=2000,
             step=50,
-            thumb_label="always",
+            suffix=" m",
         )
 
         solara.Text("Adjustment kernel", style={"font-weight": "bold"}, classes=["mt-3"])
-        rv.Slider(
-            v_model=state.kernel_radius.value,
-            on_v_model=lambda v: state.kernel_radius.set(int(v)),
-            label="Kernel radius (m)",
+        _sepal_slider(
+            state.kernel_radius,
+            "Kernel radius",
             min=30,
             max=MAX_KERNEL_RADIUS,
             step=10,
-            thumb_label="always",
+            suffix=" m",
         )
 
         solara.Text("DDR filter", style={"font-weight": "bold"}, classes=["mt-3"])
-        rv.Slider(
-            v_model=state.filter_threshold.value,
-            on_v_model=lambda v: state.filter_threshold.set(float(v)),
-            label="Disturbance threshold",
+        _sepal_slider(
+            state.filter_threshold,
+            "Disturbance threshold",
             min=0.0,
             max=0.2,
             step=0.005,
-            thumb_label="always",
+            cast=float,
+            fmt=lambda v: f"{v:.3f}",
         )
-        rv.Slider(
-            v_model=state.filter_radius.value,
-            on_v_model=lambda v: state.filter_radius.set(int(v)),
-            label="DDR kernel radius (m)",
+        _sepal_slider(
+            state.filter_radius,
+            "DDR kernel radius",
             min=MIN_FILTER_RADIUS,
             max=MAX_FILTER_RADIUS,
             step=10,
-            thumb_label="always",
+            suffix=" m",
         )
-        rv.Slider(
-            v_model=state.cleaning_offset.value,
-            on_v_model=lambda v: state.cleaning_offset.set(int(v)),
-            label="Minimum events per kernel",
+        _sepal_slider(
+            state.cleaning_offset,
+            "Min events / kernel",
             min=1,
             max=MAX_CLEANING_OFFSET,
-            thumb_label="always",
         )
