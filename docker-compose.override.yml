@@ -1,0 +1,8 @@
+services:
+  sepal-gee-bundle:
+    ports:
+      - "8767:8765"
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      SEPAL_HOST: "host.docker.internal"

@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 USER $MAMBA_USER
-COPY . /usr/local/lib/sepal-gee-bundle
+COPY --chown=$MAMBA_USER:$MAMBA_USER . /usr/local/lib/sepal-gee-bundle
 RUN micromamba create -n sepal-gee-bundle python=3.12 pip -c conda-forge -y && \
     micromamba run -n sepal-gee-bundle pip install -e . --no-cache-dir && \
     micromamba clean --all --yes && \

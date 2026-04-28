@@ -28,6 +28,9 @@ dev = [
     "pypdf>=4",
 ]
 
+[tool.setuptools.packages.find]
+include = ["apps*", "pdf_report*"]
+
 [tool.commitizen]
 version = "0.1.0"
 update_changelog_on_bump = true

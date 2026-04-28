@@ -1,8 +1,29 @@
 #!/bin/bash
 set -euo pipefail
 
-SOLARA_FILE="${1:-app.py}"
-PORT="${2:-8768}"
+SOLARA_FILE="app.py"
+PORT="8768"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --port)
+      PORT="$2"
+      shift 2
+      ;;
+    --port=*)
+      PORT="${1#--port=}"
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: $0 [filename] [--port PORT]"
+      exit 0
+      ;;
+    *)
+      SOLARA_FILE="$1"
+      shift
+      ;;
+  esac
+done
 
 if [[ -f .env ]]; then
   while IFS= read -r line; do
