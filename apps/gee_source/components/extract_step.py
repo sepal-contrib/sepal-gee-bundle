@@ -61,6 +61,7 @@ def ExtractStep(state):
             state.highlighted_html.set(html)
             state.filename.set(suggested)
             state.saved_path.set("")
+            state.live_url.set((state.app_url.value or "").strip())
             if not raw:
                 notifications.warning(
                     "No JavaScript source was found on that page — is it a public Earth Engine App?"
@@ -94,10 +95,21 @@ def ExtractStep(state):
 
     btn_props = use_task_button(extract_task, on_start=_start, cancel_reason_ref=cancel_reason)
 
+    def _on_url_change(value):
+        new_value = value or ""
+        state.app_url.set(new_value)
+        if not new_value.strip():
+            state.raw_code.set("")
+            state.highlighted_html.set("")
+            state.filename.set("")
+            state.saved_path.set("")
+            state.live_url.set("")
+            state.view_mode.set("app")
+
     with solara.Column(gap="8px"):
         rv.TextField(
             v_model=state.app_url.value,
-            on_v_model=state.app_url.set,
+            on_v_model=_on_url_change,
             label="Earth Engine App URL",
             placeholder="https://<user>.users.earthengine.app/view/<app>",
             outlined=True,

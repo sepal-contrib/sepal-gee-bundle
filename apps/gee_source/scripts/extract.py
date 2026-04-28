@@ -11,12 +11,15 @@ lives at ``dependencies[path]``.
 
 from __future__ import annotations
 
+import re
 from typing import List
 
 import requests
 from bs4 import BeautifulSoup
 
 from apps.gee_source.params import EE_APP_URL_PREFIXES, HTTP_TIMEOUT, USER_AGENT
+
+_INIT_CALL_RE = re.compile(r'\binit\(\s*"([^"]+)"')
 
 
 def _headers() -> dict:
@@ -52,20 +55,16 @@ def parse_init_urls(html: str) -> List[str]:
     """
     soup = BeautifulSoup(html, "html.parser")
     urls: List[str] = []
+    seen: set[str] = set()
     for script in soup.find_all("script"):
         body = script.string
         if body is None:
             continue
-        body = body.strip()
-        if not body.startswith("init"):
-            continue
-        # The init call pattern is: init("https://...", ...)
-        parts = body.split('"')
-        if len(parts) < 2:
-            continue
-        url = parts[1]
-        if url.startswith("https://"):
-            urls.append(url)
+        for match in _INIT_CALL_RE.finditer(body):
+            url = match.group(1).replace("\\/", "/")
+            if url.startswith("https://") and url not in seen:
+                seen.add(url)
+                urls.append(url)
     return urls
 
 

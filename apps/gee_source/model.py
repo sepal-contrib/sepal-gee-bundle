@@ -20,3 +20,9 @@ class GeeSourceState:
         self.raw_code = solara.reactive("")
         self.highlighted_html = solara.reactive("")
         self.saved_path = solara.reactive("")
+        # Which iframe to show in the central area: "app" (live EE App)
+        # or "source" (highlighted JavaScript).
+        self.view_mode = solara.reactive("app")
+        # Live URL passed to the iframe — only set after a successful
+        # extract so the central area stays empty until then.
+        self.live_url = solara.reactive("")

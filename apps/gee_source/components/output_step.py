@@ -143,41 +143,28 @@ def SaveControls(state):
             icon_name="mdi-clipboard-text-outline",
             on_click=_copy_to_clipboard,
             disabled=not has_code,
+            color="primary",
             outlined=True,
+            small=True,
             block=True,
         )
 
         # Invisible widget that actually performs the JS clipboard call.
         rv.Html(tag="span", children=[clipboard])
 
-        if state.saved_path.value:
-            rv.Alert(
-                type="success",
-                dense=True,
-                text=True,
-                children=[f"Saved: {state.saved_path.value}"],
-            )
-
 
 @solara.component
 def SourcePreview(state):
-    """Render the pygments-highlighted source (or an empty-state hint)."""
-    has_code = bool(state.raw_code.value)
+    """Render the pygments-highlighted source.
+
+    Empty-state messaging is handled by the central iframe placeholder, so
+    this component renders nothing when there is no extracted code.
+    """
+    if not state.raw_code.value:
+        return
     with solara.Column():
-        if has_code:
-            solara.HTML(tag="style", unsafe_innerHTML=highlight_css())
-            solara.HTML(tag="div", unsafe_innerHTML=state.highlighted_html.value)
-        else:
-            rv.Alert(
-                type="info",
-                dense=True,
-                text=True,
-                outlined=True,
-                children=[
-                    "Paste a public Earth Engine App URL and press "
-                    '"Extract source" to see its JavaScript here.'
-                ],
-            )
+        solara.HTML(tag="style", unsafe_innerHTML=highlight_css())
+        solara.HTML(tag="div", unsafe_innerHTML=state.highlighted_html.value)
 
 
 @solara.component
