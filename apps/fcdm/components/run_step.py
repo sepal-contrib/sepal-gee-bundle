@@ -224,12 +224,14 @@ def RunStep(state, sepal_map, gee_interface):
             **btn_props,
             icon="mdi-play",
             external_busy=state.aoi.value is None or not state.sensors.value,
+            small=True,
             block=True,
         )
 
         ExportLauncher(
             sources=export_sources,
             label="Export layers",
+            icon="mdi-cloud-download",
             button_text=True,
             small=True,
             block=True,

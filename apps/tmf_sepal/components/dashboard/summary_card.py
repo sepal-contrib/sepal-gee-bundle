@@ -60,7 +60,7 @@ def _StatItem(icon: str, label: str, value: str):
 @solara.component
 def SummaryCard(rows: list, tmf_type: str, year_start: int, year_end: int):
     """Compact stat row with TMF totals + selected range + layer type."""
-    with rv.Row(dense=True, class_="mb-3", align="center", justify="center"):
+    with rv.Row(dense=True, class_="mb-6", align="center", justify="center"):
         if not rows:
             _StatItem("mdi-alert-circle-outline", "Statistics", "—")
             return

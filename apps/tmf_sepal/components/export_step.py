@@ -61,7 +61,8 @@ def ExportStep(state, gee_interface):
     with solara.Column():
         ExportLauncher(
             sources=export_sources,
-            label="Export results",
+            label="Export layers",
+            icon="mdi-cloud-download",
             button_text=True,
             small=True,
             block=True,

@@ -42,7 +42,7 @@ def _StatItem(icon: str, label: str, value: str):
 @solara.component
 def SummaryCard(stats: dict | None):
     """Compact stat row with totals + parameters."""
-    with rv.Row(dense=True, class_="mb-3", align="center", justify="center"):
+    with rv.Row(dense=True, class_="mb-6", align="center", justify="center"):
         if not stats:
             _StatItem("mdi-alert-circle-outline", "Statistics", "—")
             return

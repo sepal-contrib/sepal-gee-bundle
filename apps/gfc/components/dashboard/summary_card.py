@@ -58,7 +58,7 @@ def SummaryCard(rows: list, treecover: int, year_start: int, year_end: int):
     """Compact stat row with AOI totals + loss/forest shares + parameters."""
     totals = summarize(rows) if rows else None
 
-    with rv.Row(dense=True, class_="mb-3", align="center", justify="center"):
+    with rv.Row(dense=True, class_="mb-6", align="center", justify="center"):
         if totals is None:
             _StatItem("mdi-alert-circle-outline", "Statistics", "—")
             return

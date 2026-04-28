@@ -167,7 +167,8 @@ def ExportStep(state, gee_interface):
 
         ExportLauncher(
             sources=export_sources,
-            label="Export results",
+            label="Export layers",
+            icon="mdi-cloud-download",
             button_text=True,
             small=True,
             block=True,
