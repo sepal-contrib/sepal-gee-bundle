@@ -15,6 +15,8 @@ logger = logging.getLogger("sepal_gee_bundle.gfc")
 
 GFC_LAYER_KEY = "gfc_classification"
 
+TREECOVER_PRESETS = (10, 30, 50, 75, 80, 90)
+
 
 @dataclass(frozen=True, slots=True)
 class VisualizeRequest:
@@ -99,16 +101,53 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
         {"text": str(2000 + i), "value": 2000 + i} for i in range(GFC_MIN_YEAR, GFC_MAX_YEAR + 1)
     ]
 
+    current_tc = state.treecover.value
+    preset_value = current_tc if current_tc in TREECOVER_PRESETS else None
+
+    def _set_preset(v):
+        if v is None:
+            return
+        state.treecover.set(int(v))
+
+    def _set_custom(v):
+        try:
+            n = int(float(v))
+        except (TypeError, ValueError):
+            return
+        if 0 <= n <= 100:
+            state.treecover.set(n)
+
     with solara.Column():
-        rv.Slider(
-            v_model=state.treecover.value,
-            on_v_model=state.treecover.set,
-            label="Tree cover threshold (%)",
-            min=0,
-            max=100,
-            thumb_label="always",
-            class_="mt-4",
-        )
+        solara.Text("Tree cover threshold (%)", style={"opacity": "0.7"})
+        with rv.Html(
+            tag="div",
+            style_="display: flex; align-items: center; gap: 8px; width: 100%;",
+            class_="mt-1 mb-2",
+        ):
+            with solara.ToggleButtonsSingle(
+                value=preset_value,
+                on_value=_set_preset,
+                mandatory=False,
+                dense=True,
+            ):
+                for preset in TREECOVER_PRESETS:
+                    solara.Button(
+                        label=str(preset),
+                        value=preset,
+                        small=True,
+                        text=True,
+                    )
+
+            rv.TextField(
+                v_model=str(state.treecover.value),
+                on_v_model=_set_custom,
+                type="number",
+                suffix="%",
+                dense=True,
+                hide_details=True,
+                placeholder="Custom",
+                style_="max-width: 96px;",
+            )
 
         rv.Select(
             v_model=state.year_start.value,

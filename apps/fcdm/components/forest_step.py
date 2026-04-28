@@ -11,6 +11,8 @@ from apps.fcdm.params import (
     SENSOR_ITEMS,
 )
 
+TREECOVER_PRESETS = (10, 30, 50, 75, 80, 90)
+
 
 @solara.component
 def ForestStep(state, gee_interface=None):
@@ -28,24 +30,65 @@ def ForestStep(state, gee_interface=None):
         )
 
         if forest_map == "gfc":
-            rv.Slider(
-                v_model=state.treecover.value,
-                on_v_model=lambda v: state.treecover.set(int(v)),
-                label="Tree cover threshold (%)",
-                min=0,
-                max=100,
-                thumb_label="always",
-                class_="mt-4",
-            )
+            current_tc = state.treecover.value
+            preset_value = current_tc if current_tc in TREECOVER_PRESETS else None
+
+            def _set_preset(v):
+                if v is None:
+                    return
+                state.treecover.set(int(v))
+
+            def _set_custom(v):
+                try:
+                    n = int(float(v))
+                except (TypeError, ValueError):
+                    return
+                if 0 <= n <= 100:
+                    state.treecover.set(n)
+
+            solara.Text("Tree cover threshold (%)", style={"opacity": "0.7"})
+            with rv.Html(
+                tag="div",
+                style_="display: flex; align-items: center; gap: 8px; width: 100%;",
+                class_="mt-1 mb-2",
+            ):
+                with solara.ToggleButtonsSingle(
+                    value=preset_value,
+                    on_value=_set_preset,
+                    mandatory=False,
+                    dense=True,
+                ):
+                    for preset in TREECOVER_PRESETS:
+                        solara.Button(
+                            label=str(preset),
+                            value=preset,
+                            small=True,
+                            text=True,
+                        )
+
+                rv.TextField(
+                    v_model=str(state.treecover.value),
+                    on_v_model=_set_custom,
+                    type="number",
+                    suffix="%",
+                    dense=True,
+                    hide_details=True,
+                    placeholder="Custom",
+                    style_="max-width: 96px;",
+                )
 
         if forest_map in ("gfc", "roadless"):
-            rv.Slider(
+            year_items = [
+                {"text": str(y), "value": y}
+                for y in range(FOREST_MAP_MAX_YEAR, FOREST_MAP_MIN_YEAR - 1, -1)
+            ]
+            rv.Select(
                 v_model=state.forest_map_year.value,
                 on_v_model=lambda v: state.forest_map_year.set(int(v)),
+                items=year_items,
                 label="Forest mask baseline year",
-                min=FOREST_MAP_MIN_YEAR,
-                max=FOREST_MAP_MAX_YEAR,
-                thumb_label="always",
+                dense=True,
+                outlined=True,
                 class_="mt-4",
             )
 
