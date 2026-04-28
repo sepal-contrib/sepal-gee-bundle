@@ -28,7 +28,7 @@ class TestGfcParams:
 class TestClassifyGfc:
     """Test GFC classification function."""
 
-    @patch("apps.gfc.scripts.gfc_classification.ee")
+    @patch("apps._commons.gfc.ee")
     def test_returns_uint8_image(self, mock_ee):
         """classify_gfc should return a .uint8() image."""
         from apps.gfc.scripts.gfc_classification import classify_gfc

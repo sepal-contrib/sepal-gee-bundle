@@ -121,6 +121,7 @@ CLOUD_MASKERS = {
     "landsat 5": masking_landsat,
     "landsat 7": masking_landsat,
     "landsat 8": masking_landsat,
+    "landsat 9": masking_landsat,
     "sentinel 2": masking_sentinel2_sr,
 }
 

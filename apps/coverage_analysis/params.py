@@ -6,8 +6,17 @@ Reflectance uses Level 2 (``T1_L2``) and TOA uses the C02 T1 collections.
 
 from __future__ import annotations
 
+from apps._commons.datasets import (
+    SENTINEL_2_CLOUD_PROBABILITY_ID,
+    SENTINEL_2_SR_ID,
+    SENTINEL_2_TOA_ID,
+    landsat_c02_sr,
+    landsat_c02_toa,
+)
+
 # --- Sensor options (UI) ---
 SENSOR_ITEMS: list[dict] = [
+    {"text": "Landsat 9", "value": "l9"},
     {"text": "Landsat 8", "value": "l8"},
     {"text": "Landsat 7", "value": "l7"},
     {"text": "Landsat 5", "value": "l5"},
@@ -37,25 +46,15 @@ TEMP_ITEMS: list[dict] = [
 ]
 
 # --- Dataset IDs (C02) ---
-# Landsat C02 templates (SR uses L2, TOA uses T1_TOA on C02).
-LANDSAT_C02_SR: dict[str, str] = {
-    "l4": "LANDSAT/LT04/C02/T1_L2",
-    "l5": "LANDSAT/LT05/C02/T1_L2",
-    "l7": "LANDSAT/LE07/C02/T1_L2",
-    "l8": "LANDSAT/LC08/C02/T1_L2",
-}
-
-LANDSAT_C02_TOA: dict[str, str] = {
-    "l4": "LANDSAT/LT04/C02/T1_TOA",
-    "l5": "LANDSAT/LT05/C02/T1_TOA",
-    "l7": "LANDSAT/LE07/C02/T1_TOA",
-    "l8": "LANDSAT/LC08/C02/T1_TOA",
-}
+# Landsat C02 ids come from the bundle-wide registry.  L9 inherits L8's band
+# layout (OLI-2 + TIRS-2).
+LANDSAT_C02_SR: dict[str, str] = landsat_c02_sr()
+LANDSAT_C02_TOA: dict[str, str] = landsat_c02_toa()
 
 # Sentinel-2
-S2_SR_ID = "COPERNICUS/S2_SR_HARMONIZED"
-S2_TOA_ID = "COPERNICUS/S2_HARMONIZED"
-S2_CLOUD_PROB_ID = "COPERNICUS/S2_CLOUD_PROBABILITY"
+S2_SR_ID = SENTINEL_2_SR_ID
+S2_TOA_ID = SENTINEL_2_TOA_ID
+S2_CLOUD_PROB_ID = SENTINEL_2_CLOUD_PROBABILITY_ID
 
 # Per-sensor NIR/Red band names to compute NDVI (depends on SR/TOA).
 # For C02 L2, SR bands are prefixed with SR_B*.
@@ -64,6 +63,7 @@ NDVI_BANDS_SR: dict[str, tuple[str, str]] = {
     "l5": ("SR_B4", "SR_B3"),
     "l7": ("SR_B4", "SR_B3"),
     "l8": ("SR_B5", "SR_B4"),
+    "l9": ("SR_B5", "SR_B4"),
     "s2": ("B8", "B4"),
 }
 
@@ -72,6 +72,7 @@ NDVI_BANDS_TOA: dict[str, tuple[str, str]] = {
     "l5": ("B4", "B3"),
     "l7": ("B4", "B3"),
     "l8": ("B5", "B4"),
+    "l9": ("B5", "B4"),
     "s2": ("B8", "B4"),
 }
 
@@ -81,6 +82,7 @@ COUNT_BAND_SR: dict[str, str] = {
     "l5": "SR_B2",
     "l7": "SR_B2",
     "l8": "SR_B3",
+    "l9": "SR_B3",
     "s2": "B3",
 }
 
@@ -89,6 +91,7 @@ COUNT_BAND_TOA: dict[str, str] = {
     "l5": "B2",
     "l7": "B2",
     "l8": "B3",
+    "l9": "B3",
     "s2": "B3",
 }
 

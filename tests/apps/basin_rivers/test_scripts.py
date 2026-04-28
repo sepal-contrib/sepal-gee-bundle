@@ -41,7 +41,7 @@ class TestParams:
 
 
 class TestClassifyGfc:
-    @patch("apps.basin_rivers.scripts.gfc_classification.ee")
+    @patch("apps._commons.gfc.ee")
     def test_returns_uint8(self, mock_ee):
         from apps.basin_rivers.scripts.gfc_classification import classify_gfc
 

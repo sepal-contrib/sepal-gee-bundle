@@ -2,10 +2,11 @@
 
 from pysepal.solara.components.legend import DiscreteEntry, GradientEntry, LegendData
 
+from apps._commons.datasets import JRC_TMF_VERSION_YEAR, jrc_tmf_id
+
 # --- JRC TMF dataset version ---
-# The JRC TMF dataset is published yearly as ``projects/JRC/TMF/v1_<YEAR>/...``.
-# Update ``TMF_VERSION_YEAR`` when a newer release is available.
-TMF_VERSION_YEAR = 2023
+# Sourced from ``apps._commons.datasets`` so all apps stay in lockstep.
+TMF_VERSION_YEAR = JRC_TMF_VERSION_YEAR
 
 # The Annual Changes collection covers 1990..TMF_VERSION_YEAR inclusive.
 TMF_MIN_YEAR = 1990
@@ -13,15 +14,15 @@ TMF_MAX_YEAR = TMF_VERSION_YEAR
 
 
 def deg_dataset_id() -> str:
-    return f"projects/JRC/TMF/v1_{TMF_VERSION_YEAR}/DegradationYear"
+    return jrc_tmf_id("DegradationYear")
 
 
 def def_dataset_id() -> str:
-    return f"projects/JRC/TMF/v1_{TMF_VERSION_YEAR}/DeforestationYear"
+    return jrc_tmf_id("DeforestationYear")
 
 
 def chg_dataset_id() -> str:
-    return f"projects/JRC/TMF/v1_{TMF_VERSION_YEAR}/AnnualChanges"
+    return jrc_tmf_id("AnnualChanges")
 
 
 # --- TMF layer types ---

@@ -10,16 +10,20 @@ from __future__ import annotations
 
 from pysepal.solara.components.legend import DiscreteEntry, GradientEntry, LegendData
 
+from apps._commons.datasets import (
+    ALOS_PALSAR_FNF_ID,
+    ALOS_PALSAR_FNF_LAST_YEAR,
+    ALOS_PALSAR_SAR_ID,
+    ALOS_PALSAR_YEARS,
+)
+
 # --- GEE dataset IDs ---------------------------------------------------------
-# JAXA ALOS PALSAR/PALSAR-2 yearly SAR mosaics (25 m native resolution).
-ALOS_SAR_COLLECTION = "JAXA/ALOS/PALSAR/YEARLY/SAR"
-# Forest / Non-Forest yearly product (25 m). Discontinued after 2017.
-ALOS_FNF_COLLECTION = "JAXA/ALOS/PALSAR/YEARLY/FNF"
+ALOS_SAR_COLLECTION = ALOS_PALSAR_SAR_ID
+ALOS_FNF_COLLECTION = ALOS_PALSAR_FNF_ID
 
 # --- Years -------------------------------------------------------------------
-ALOS_YEARS = [2007, 2008, 2009, 2010, 2015, 2016, 2017, 2018, 2019, 2020]
-# FNF is only published up to and including this year.
-LAST_FNF_YEAR = 2017
+ALOS_YEARS = list(ALOS_PALSAR_YEARS)
+LAST_FNF_YEAR = ALOS_PALSAR_FNF_LAST_YEAR
 
 # --- Speckle filters ---------------------------------------------------------
 SPECKLE_NONE = "NONE"

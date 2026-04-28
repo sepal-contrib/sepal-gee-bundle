@@ -2,126 +2,67 @@
 
 from datetime import datetime as _dt
 
+from apps._commons.datasets import (
+    HANSEN_GFC_ID,
+    JRC_TMF_ANNUAL_CHANGES_ID,
+    LANDSAT_PLATFORMS,
+    SENTINEL_2_SR_ID,
+    SENTINEL_2_TOA_ID,
+)
+
 # --- Datasets ---
-HANSEN_GFC = "UMD/hansen/global_forest_change_2024_v1_12"
-JRC_ROADLESS = "projects/JRC/TMF/v1_2024/AnnualChanges"
+HANSEN_GFC = HANSEN_GFC_ID
+JRC_ROADLESS = JRC_TMF_ANNUAL_CHANGES_ID
 
 # --- Sensors ---
-# Migrated to Landsat C02. Sentinel-2 TOA is COPERNICUS/S2_HARMONIZED (same band names).
-# Notes:
-#   - L4/L5/L7 C02 SR band names differ from C01 (SR_B1..7, QA_PIXEL, ST_B6/ST_B10)
-#   - The legacy algorithm relied on `pixel_qa`, `sr_cloud_qa`, `cloud` (from
-#     simpleCloudScore) and `bright_temp1`. In C02 the equivalents are
-#     `QA_PIXEL`, `SR_QA_AEROSOL` (no `sr_cloud_qa`), and thermal `ST_B6`/`ST_B10`.
-#   - The pipeline has been simplified to the QA_PIXEL bit-mask scheme. The
-#     `unsure_clouds` / `bright_temp1` branch is preserved for compatibility but
-#     reads thermal from C02 names when available.
+# Asset ids and the Landsat band layouts come from `apps._commons.datasets`.
+# The `cloud` band name is a synthetic property added by simpleCloudScore on
+# the TOA join, so it is not part of the Landsat schema in the registry.
 
-SENSORS = {
-    "landsat 4": {
-        "start": 1982,
-        "end": 1993,
-        "dataset": {
-            "toa": "LANDSAT/LT04/C02/T1_TOA",
-            "sr": "LANDSAT/LT04/C02/T1_L2",
-        },
-        "bands": {
-            "blue": "SR_B1",
-            "green": "SR_B2",
-            "red": "SR_B3",
-            "nir": "SR_B4",
-            "swir1": "SR_B5",
-            "swir2": "SR_B7",
-            "pixel_qa": "QA_PIXEL",
-            "cloud": "cloud",
-            "bright_temp1": "ST_B6",
-        },
+_SENTINEL_2_BANDS = {
+    "blue": "B2",
+    "green": "B3",
+    "red": "B4",
+    "nir": "B8",
+    "swir1": "B11",
+    "swir2": "B12",
+    "qa60": "QA60",
+    "aerosol": "B1",
+    "water_vapor": "B9",
+    "red_edge_3": "B7",
+    "red_edge_4": "B8A",
+    "red_edge_2": "B6",
+    "scl": "SCL",
+}
+
+
+def _landsat_entry(short: str) -> dict:
+    p = LANDSAT_PLATFORMS[short]
+    end = p.end_year if p.end_year is not None else _dt.now().year
+    bands = {
+        **p.bands,
+        "cloud": "cloud",  # synthetic band from simpleCloudScore TOA join
+        "bright_temp1": p.bands["thermal"],
+    }
+    return {
+        "start": p.start_year,
+        "end": end,
+        "dataset": {"toa": p.toa, "sr": p.sr},
+        "bands": bands,
         "res": 30,
-    },
-    "landsat 5": {
-        "start": 1984,
-        "end": 2013,
-        "dataset": {
-            "toa": "LANDSAT/LT05/C02/T1_TOA",
-            "sr": "LANDSAT/LT05/C02/T1_L2",
-        },
-        "bands": {
-            "blue": "SR_B1",
-            "green": "SR_B2",
-            "red": "SR_B3",
-            "nir": "SR_B4",
-            "swir1": "SR_B5",
-            "swir2": "SR_B7",
-            "pixel_qa": "QA_PIXEL",
-            "cloud": "cloud",
-            "bright_temp1": "ST_B6",
-        },
-        "res": 30,
-    },
-    "landsat 7": {
-        "start": 1999,
-        "end": _dt.now().year,
-        "dataset": {
-            "toa": "LANDSAT/LE07/C02/T1_TOA",
-            "sr": "LANDSAT/LE07/C02/T1_L2",
-        },
-        "bands": {
-            "blue": "SR_B1",
-            "green": "SR_B2",
-            "red": "SR_B3",
-            "nir": "SR_B4",
-            "swir1": "SR_B5",
-            "swir2": "SR_B7",
-            "pixel_qa": "QA_PIXEL",
-            "cloud": "cloud",
-            "bright_temp1": "ST_B6",
-        },
-        "res": 30,
-    },
-    "landsat 8": {
-        "start": 2013,
-        "end": _dt.now().year,
-        "dataset": {
-            "toa": "LANDSAT/LC08/C02/T1_TOA",
-            "sr": "LANDSAT/LC08/C02/T1_L2",
-        },
-        "bands": {
-            "blue": "SR_B2",
-            "green": "SR_B3",
-            "red": "SR_B4",
-            "nir": "SR_B5",
-            "swir1": "SR_B6",
-            "swir2": "SR_B7",
-            "pixel_qa": "QA_PIXEL",
-            "cloud": "cloud",
-            "bright_temp1": "ST_B10",
-        },
-        "res": 30,
-    },
-    "sentinel 2": {
-        "start": 2015,
-        "end": _dt.now().year,
-        "dataset": {
-            "toa": "COPERNICUS/S2_HARMONIZED",
-            "sr": "COPERNICUS/S2_SR_HARMONIZED",
-        },
-        "bands": {
-            "blue": "B2",
-            "green": "B3",
-            "red": "B4",
-            "nir": "B8",
-            "swir1": "B11",
-            "swir2": "B12",
-            "qa60": "QA60",
-            "aerosol": "B1",
-            "water_vapor": "B9",
-            "red_edge_3": "B7",
-            "red_edge_4": "B8A",
-            "red_edge_2": "B6",
-            "scl": "SCL",
-        },
-        "res": 10,
-    },
+    }
+
+
+SENSORS: dict = {
+    f"landsat {p.short[1:]}": _landsat_entry(p.short)
+    for p in LANDSAT_PLATFORMS.values()
+}
+SENSORS["sentinel 2"] = {
+    "start": 2015,
+    "end": _dt.now().year,
+    "dataset": {"toa": SENTINEL_2_TOA_ID, "sr": SENTINEL_2_SR_ID},
+    "bands": _SENTINEL_2_BANDS,
+    "res": 10,
 }
 
 SENSOR_ITEMS = [{"text": name, "value": name} for name in SENSORS]
@@ -135,7 +76,7 @@ FOREST_MAP_ITEMS = [
 ]
 
 FOREST_MAP_MIN_YEAR = 2000
-FOREST_MAP_MAX_YEAR = 2023
+FOREST_MAP_MAX_YEAR = 2024
 
 # --- Algorithm defaults & bounds ---
 DEFAULT_TREECOVER = 70
