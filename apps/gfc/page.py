@@ -75,7 +75,12 @@ def GfcPage():
 
     state = solara.use_memo(lambda: GfcState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(gee_interface=gee_interface, fullscreen=True, theme_state=theme_state),
+        lambda: SepalMap(
+            gee_interface=gee_interface,
+            fullscreen=True,
+            theme_state=theme_state,
+            min_zoom=3,
+        ),
         [id(gee_interface)],
     )
 
@@ -109,7 +114,9 @@ def GfcPage():
         {
             "title": "Parameters",
             "icon": "mdi-tune",
-            "content": [ParamsStep(state, sepal_map, gee_interface, legend_data, legend_visible)],
+            "content": [
+                ParamsStep(state, sepal_map, gee_interface, legend_data, legend_visible)
+            ],
         },
         {
             "title": "Results & Export",

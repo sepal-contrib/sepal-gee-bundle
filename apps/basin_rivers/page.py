@@ -34,7 +34,12 @@ def BasinRiversPage():
 
     state = solara.use_memo(lambda: BasinRiversState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(gee_interface=gee_interface, fullscreen=True, theme_state=theme_state),
+        lambda: SepalMap(
+            gee_interface=gee_interface,
+            fullscreen=True,
+            theme_state=theme_state,
+            min_zoom=3,
+        ),
         [id(gee_interface)],
     )
 

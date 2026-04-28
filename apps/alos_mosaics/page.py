@@ -75,7 +75,12 @@ def AlosMosaicsPage():
 
     state = solara.use_memo(lambda: AlosMosaicsState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(gee_interface=gee_interface, fullscreen=True, theme_state=theme_state),
+        lambda: SepalMap(
+            gee_interface=gee_interface,
+            fullscreen=True,
+            theme_state=theme_state,
+            min_zoom=3,
+        ),
         [id(gee_interface)],
     )
 
@@ -109,7 +114,9 @@ def AlosMosaicsPage():
         {
             "title": "Visualization",
             "icon": "mdi-map",
-            "content": [VizStep(state, sepal_map, gee_interface, legend_data, legend_visible)],
+            "content": [
+                VizStep(state, sepal_map, gee_interface, legend_data, legend_visible)
+            ],
         },
         {
             "title": "Export",
