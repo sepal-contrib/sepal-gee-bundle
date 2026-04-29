@@ -23,6 +23,7 @@ Bundle of lightweight GEE-based SEPAL applications sharing a single Solara conta
 - **Promote stable commons to pysepal** — once a `_commons` module is field-tested and reusable beyond this bundle, graduate it into `pysepal` (e.g. `pysepal.gee.gfc`).
 - **`pyproject.toml` is the dependency source of truth** — no `requirements.txt`.
 - **Follow the `pysepal-app` skill** for all component, state, GEE, layout, ipyvuetify, logging, and i18n patterns. That skill is the single source of truth for how pysepal apps are built.
+- **User workspace files go through `SepalClient`** — container apps must use the session `get_current_sepal_client()` / `SepalClient` for runtime user-file reads, writes, directory creation, and listing. Do not use `Path`, `os`, `shutil`, `glob`, or `open()` for SEPAL user workspace data; the container filesystem is only for app code and bundled read-only assets.
 
 ## Migration Strategy
 

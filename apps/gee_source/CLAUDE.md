@@ -5,7 +5,7 @@
 Utility that extracts the JavaScript source code of a public **Earth Engine
 App** given its public URL, shows it with syntax highlighting, and
 optionally saves it to the user's SEPAL workspace under
-`~/module_results/gee_source/<name>.js`.
+the session `SepalClient.results_path` as `<name>.js`.
 
 This app does **not** use Earth Engine credentials, AOI, or a map. It is a
 pure HTTP/HTML scraper backed by `requests` + `BeautifulSoup` + `pygments`.
@@ -20,7 +20,7 @@ pure HTTP/HTML scraper backed by `requests` + `BeautifulSoup` + `pygments`.
 3. The raw JavaScript is rendered through pygments (JavaScript lexer) and
    shown below the input form.
 4. The user edits the suggested filename and presses **Save to SEPAL** to
-   write `<filename>.js` into `~/module_results/gee_source/`.
+   write `<filename>.js` into the app's SEPAL module results folder through `SepalClient`.
 
 ## Legacy Mapping
 
@@ -35,7 +35,7 @@ Local: `~/1_modules/gee_source/`
 | `component/model/model.py::Model`        | `model.py::GeeSourceState` (reactives)            |
 | `component/tile/main_tile.py::MainTile`  | `components/extract_step.py`, `components/output_step.py` |
 | `component/widget/code_window.py`        | `solara.HTML` rendering `highlight_javascript(...)` |
-| `component/parameter/directory.py`       | `params.py::RESULT_DIR`                           |
+| `component/parameter/directory.py`       | `SepalClient.results_path` + `scripts/save.py::save_code` |
 | `sepal_ui.scripts.utils.normalize_str`   | `scripts/save.py::sanitize_filename`              |
 
 ## File Layout
@@ -47,7 +47,7 @@ apps/gee_source/
 ├── logging_config.toml     # sepal_gee_bundle.gee_source logger
 ├── model.py                # GeeSourceState — reactives only
 ├── page.py                 # GeeSourcePage — plain Solara card layout
-├── params.py               # RESULT_DIR, HTTP_TIMEOUT, USER_AGENT, OUTPUT_EXTENSION
+├── params.py               # HTTP_TIMEOUT, USER_AGENT, OUTPUT_EXTENSION
 ├── components/
 │   ├── __init__.py
 │   ├── extract_step.py     # URL field + Extract (TaskButtonComponent)
@@ -63,7 +63,7 @@ apps/gee_source/
 
 | Constant             | Default                               | Meaning                                         |
 |----------------------|---------------------------------------|-------------------------------------------------|
-| `RESULT_DIR`         | `~/module_results/gee_source`         | Where `.js` files are saved                     |
+| `SepalClient.results_path` | session-derived module folder      | Where `.js` files are saved through user-files  |
 | `HTTP_TIMEOUT`       | `30` seconds                          | Timeout for every HTTP call                     |
 | `USER_AGENT`         | `sepal-gee-bundle/gee_source (...)`   | Presented to Earth Engine App hosts             |
 | `OUTPUT_EXTENSION`   | `.js`                                 | Appended to the sanitized filename on save      |
@@ -79,12 +79,12 @@ apps/gee_source/
   `solara.Error` / `solara.Success`.
 - **Async buttons** — both the extract and save actions use
   `TaskButtonComponent` + `use_task_button`, with `prefer_threaded=False`
-  on every `use_task`. Blocking `requests`/file I/O is run via
-  `asyncio.to_thread(...)`.
+  on every `use_task`. Blocking `requests` calls and synchronous
+  `SepalClient` user-files calls are run via `asyncio.to_thread(...)`.
 - **Pure scripts** — `extract_js_source`, `highlight_javascript`,
-  `sanitize_filename`, `save_code` are all side-effect-free (or
-  parametrised on `result_dir`) and have unit tests that never hit the
-  network.
+  and `sanitize_filename` are side-effect-free. `save_code` is parametrised
+  on `SepalClient` and unit-tested with a fake client, so tests never write
+  to the container filesystem or hit the network.
 
 ## Caveats
 
