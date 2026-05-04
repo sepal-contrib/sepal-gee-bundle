@@ -1,0 +1,47 @@
+# Secrets / local config — must NEVER be baked into the image
+.env
+.env.*
+!.env.example
+
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Python build / cache
+__pycache__
+*.py[cod]
+*.egg-info
+.eggs
+build
+dist
+.venv
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+
+# Tests / docs / dev tooling — not needed at runtime
+tests
+docs
+.pre-commit-config.yaml
+.github
+
+# Logs / scratch / data
+*.log
+*.tif
+*.geojson
+
+# Claude / Superpowers scratch
+.claude
+.superpowers
+CLAUDE.md
+**/CLAUDE.md
+
+# Compose / local dev
+docker-compose.override.yml
+run_solara.sh

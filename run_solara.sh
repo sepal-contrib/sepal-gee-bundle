@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SOLARA_FILE="app.py"
-PORT="8768"
+PORT="8769"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
