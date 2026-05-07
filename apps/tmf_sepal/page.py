@@ -15,7 +15,7 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
-from apps._widgets import AboutOnceDialog
+from apps._widgets import AboutOnceDialog, MarkdownNewTab
 
 from .components import AoiStep, ExportStep, ParamsStep, StatsStep
 from .model import TmfSepalState
@@ -52,13 +52,13 @@ interest and year range.
   changes in the humid tropics." *Science Advances* 7, eabe1603.]\
 (https://www.science.org/doi/10.1126/sciadv.abe1603)
 - [JRC TMF dataset portal](https://forobs.jrc.ec.europa.eu/TMF/)
-- Legacy SEPAL module: https://github.com/sepal-contrib/tmf_sepal
+- [Legacy SEPAL module](https://github.com/sepal-contrib/tmf_sepal)
 """
 
 
 @solara.component
 def AboutContent():
-    solara.Markdown(ABOUT_TEXT)
+    MarkdownNewTab(ABOUT_TEXT)
 
 
 @solara.component
@@ -130,7 +130,8 @@ def TmfSepalPage():
 
     MapApp.element(
         app_title="Tropical Moist Forests",
-        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/tmf_sepal",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
+        docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/tmf_sepal",
         app_icon="mdi-tree",
         main_map=[sepal_map],
         steps_data=steps_data,

@@ -7,5 +7,6 @@ constants and pure functions).
 
 from .about_dialog import AboutOnceDialog
 from .local_storage import LocalStorageBridge
+from .markdown import MarkdownNewTab
 
-__all__ = ["AboutOnceDialog", "LocalStorageBridge"]
+__all__ = ["AboutOnceDialog", "LocalStorageBridge", "MarkdownNewTab"]

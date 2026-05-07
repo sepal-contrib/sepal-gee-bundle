@@ -12,12 +12,14 @@ from pysepal.solara import (
     setup_theme_colors,
     with_sepal_sessions,
 )
+from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
-from apps._widgets import AboutOnceDialog
+from apps._widgets import AboutOnceDialog, MarkdownNewTab
 
 from .components import AoiStep, ForestStep, ParamsStep, RunStep
 from .model import FcdmState
+from .params import delta_rnbr_legend
 
 logger = setup_logging(logger_name="sepal_gee_bundle.fcdm")
 logger.setLevel(logging.DEBUG)
@@ -43,14 +45,14 @@ parameters (adjustment kernel, DDR filter).
 ### References
 
 - [SEPAL documentation](https://docs.sepal.io/)
-- Original sepal_ui module: https://github.com/sepal-contrib/fcdm
+- [Original sepal_ui module](https://github.com/sepal-contrib/fcdm)
 - Sentinel-2 cloud masking: Dario Simonetti (JRC) — IFORCE / PINO.
 """
 
 
 @solara.component
 def AboutContent():
-    solara.Markdown(ABOUT_TEXT)
+    MarkdownNewTab(ABOUT_TEXT)
 
 
 @solara.component
@@ -64,6 +66,8 @@ def FcdmPage():
     gee_interface = get_current_gee_interface()
 
     state = solara.use_memo(lambda: FcdmState(), [])
+    legend_data = solara.use_reactive(delta_rnbr_legend())
+    legend_visible = solara.use_reactive(False)
     sepal_map = solara.use_memo(
         lambda: SepalMap(
             gee_interface=gee_interface,
@@ -111,13 +115,14 @@ def FcdmPage():
         {
             "title": "Run & export",
             "icon": "mdi-play-circle",
-            "content": [RunStep(state, sepal_map, gee_interface)],
+            "content": [RunStep(state, sepal_map, gee_interface, legend_visible)],
         },
     ]
 
     MapApp.element(
         app_title="Forest Canopy Disturbance Monitoring",
-        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/fcdm",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
+        docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/fcdm",
         app_icon="mdi-tree-outline",
         main_map=[sepal_map],
         steps_data=steps_data,
@@ -126,6 +131,11 @@ def FcdmPage():
         right_panel_open=True,
         is_pinned=False,
         theme_state=theme_state,
+    )
+
+    LegendComponent(
+        legend_data=legend_data.value,
+        visible=legend_visible.value,
     )
 
     AboutOnceDialog(

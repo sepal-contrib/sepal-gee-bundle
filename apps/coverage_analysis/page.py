@@ -15,7 +15,7 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
-from apps._widgets import AboutOnceDialog
+from apps._widgets import AboutOnceDialog, MarkdownNewTab
 
 from .components import AoiStep, DashboardStep, ExportStep, VisualizeStep
 from .model import CoverageState
@@ -48,7 +48,7 @@ Analyze satellite imagery availability and NDVI statistics over an AOI.
 
 @solara.component
 def AboutContent():
-    solara.Markdown(ABOUT_TEXT)
+    MarkdownNewTab(ABOUT_TEXT)
 
 
 @solara.component
@@ -124,7 +124,8 @@ def CoverageAnalysisPage():
 
     MapApp.element(
         app_title="Satellite Coverage Analysis",
-        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/coverage_analysis",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
+        docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/coverage_analysis",
         app_icon="mdi-satellite-uplink",
         main_map=[sepal_map],
         steps_data=steps_data,

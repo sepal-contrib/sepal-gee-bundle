@@ -15,7 +15,7 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
-from apps._widgets import AboutOnceDialog
+from apps._widgets import AboutOnceDialog, MarkdownNewTab
 
 from .components import AoiStep, ParamsStep, ResultsStep
 from .model import GfcState
@@ -60,7 +60,7 @@ Forest Cover Change." *Science* 342: 850-53.]\
 @solara.component
 def AboutContent():
     """About content rendered inside the MapApp dialog step."""
-    solara.Markdown(
+    MarkdownNewTab(
         ABOUT_TEXT,
         style="img { width: 70%; display: block; margin: 16px auto 0; border-radius: 8px; }",
     )
@@ -130,7 +130,8 @@ def GfcPage():
 
     MapApp.element(
         app_title="Global Forest Change",
-        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/gfc",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
+        docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/gfc",
         app_icon="mdi-forest",
         main_map=[sepal_map],
         steps_data=steps_data,
