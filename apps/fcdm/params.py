@@ -126,6 +126,30 @@ def viz_forest_mask(key: str) -> dict:
 # Delta-rNBR visualization (legacy: grey -> red across [0, 0.3])
 DELTA_NBR_VIS = {"min": 0, "max": 0.3, "palette": ["#D3D3D3", "#Ce0f0f"]}
 
+
+def delta_rnbr_legend():
+    """Return LegendData for the Delta-rNBR map layer (gradient + forest mask)."""
+    from dataclasses import asdict
+
+    from pysepal.solara.components.legend import (
+        DiscreteEntry,
+        GradientEntry,
+        LegendData,
+    )
+
+    return asdict(
+        LegendData(
+            gradients=[
+                GradientEntry(
+                    title="Delta-rNBR",
+                    colors=DELTA_NBR_VIS["palette"],
+                    labels=[str(DELTA_NBR_VIS["min"]), str(DELTA_NBR_VIS["max"])],
+                )
+            ],
+            items=[DiscreteEntry(label="Forest mask", color="#006600")],
+        )
+    )
+
 # Layer name constants (used by components to manage map state)
 LAYER_AOI = "AOI"
 LAYER_FOREST_MASK = "Forest mask"

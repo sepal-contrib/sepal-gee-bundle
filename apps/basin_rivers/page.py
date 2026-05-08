@@ -83,7 +83,8 @@ def BasinRiversPage():
 
     MapApp.element(
         app_title="Basin Rivers",
-        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/basin_rivers",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
+        docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/basin_rivers",
         app_icon="mdi-waves",
         main_map=[sepal_map],
         steps_data=steps_data,

@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Bundle of lightweight GEE-based SEPAL applications: FCDM, Basin Rivers, GFC, Coverage Analysis"
 requires-python = ">=3.12"
 dependencies = [
-    "pysepal",
+    "pysepal>=3.5.0",
     "solara",
     "starlette<1.0",
     "ee-client>=2.5.0",

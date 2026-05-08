@@ -12,6 +12,8 @@ from pysepal.solara import (
 )
 from pysepal.solara.notifications import NotificationProvider
 
+from apps._widgets import MarkdownNewTab
+
 from .components import (
     ExtractStep,
     SaveControls,
@@ -49,7 +51,7 @@ will produce an empty source result.
 @solara.component
 def AboutContent():
     """About content rendered inside the MapApp dialog step."""
-    solara.Markdown(ABOUT_TEXT)
+    MarkdownNewTab(ABOUT_TEXT)
 
 
 @solara.component
@@ -112,7 +114,8 @@ def GeeSourcePage():
 
     MapApp.element(
         app_title="GEE Source",
-        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/gee_source",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
+        docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/gee_source",
         app_icon="mdi-code-tags",
         main_map=[iframe_widget],
         steps_data=steps_data,

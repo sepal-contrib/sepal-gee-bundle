@@ -51,18 +51,20 @@ class SourceIframe(v.VuetifyTemplate):
       v-if="mode === 'app' && app_url"
       :src="app_url"
       style="width:100%; height:100%; border:none; background:white; display:block;"
-      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
+      referrerpolicy="no-referrer"
     ></iframe>
     <iframe
       v-else-if="mode === 'source' && srcdoc"
       :srcdoc="srcdoc"
       style="width:100%; height:100%; border:none; background:white; display:block;"
-      sandbox="allow-same-origin"
+      sandbox=""
     ></iframe>
     <iframe
       v-else
       :srcdoc="placeholder"
       style="width:100%; height:100%; border:none; display:block;"
+      sandbox=""
     ></iframe>
   </div>
 </template>

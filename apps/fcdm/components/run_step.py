@@ -66,7 +66,7 @@ def _validate_inputs(state) -> str | None:
 
 
 @solara.component
-def RunStep(state, sepal_map, gee_interface):
+def RunStep(state, sepal_map, gee_interface, legend_visible=None):
     """Run the Delta-rNBR pipeline, display layers, and expose exports."""
     notifications = use_notifications()
     cancel_ref = solara.use_ref(None)
@@ -132,6 +132,8 @@ def RunStep(state, sepal_map, gee_interface):
             return
         if run_task.finished and run_task.value is not None:
             state.result.value = run_task.value
+            if legend_visible is not None:
+                legend_visible.set(True)
             notifications.success("Delta-rNBR layer added to map")
 
     solara.use_effect(
@@ -147,6 +149,8 @@ def RunStep(state, sepal_map, gee_interface):
         cancel_ref.current = None
         state.loading.value = True
         state.result.value = None
+        if legend_visible is not None:
+            legend_visible.set(False)
         # Translate the UI "custom" sentinel into the asset id so the pipeline's
         # get_forest_mask() falls through to its ee.Image(asset_id) branch.
         forest_map_value = (

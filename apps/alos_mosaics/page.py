@@ -20,7 +20,7 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
-from apps._widgets import AboutOnceDialog
+from apps._widgets import AboutOnceDialog, MarkdownNewTab
 
 from .components import AoiStep, ExportStep, VizStep
 from .model import AlosMosaicsState
@@ -57,13 +57,13 @@ filtering (Quegan or Refined Lee), layover / shadow masking and dB scaling.
 - [Shimada, M. et al. 2014. "New global forest/non-forest maps from ALOS
   PALSAR data (2007-2010)."](https://doi.org/10.1016/j.rse.2014.04.014)
 - [JAXA PALSAR mosaics portal](https://www.eorc.jaxa.jp/ALOS/en/dataset/fnf_e.htm)
-- Legacy SEPAL module: https://github.com/sepal-contrib/alos_mosaics
+- [Legacy SEPAL module](https://github.com/sepal-contrib/alos_mosaics)
 """
 
 
 @solara.component
 def AboutContent():
-    solara.Markdown(ABOUT_TEXT)
+    MarkdownNewTab(ABOUT_TEXT)
 
 
 @solara.component
@@ -130,7 +130,8 @@ def AlosMosaicsPage():
 
     MapApp.element(
         app_title="ALOS mosaics",
-        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/alos_mosaics",
+        repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
+        docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/alos_mosaics",
         app_icon="mdi-satellite-variant",
         main_map=[sepal_map],
         steps_data=steps_data,

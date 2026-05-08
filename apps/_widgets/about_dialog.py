@@ -12,6 +12,7 @@ import reacton.ipyvuetify as rv
 import solara
 
 from .local_storage import LocalStorageBridge
+from .markdown import MarkdownNewTab
 
 _DISMISSED = "1"
 _DEFAULT_MARKDOWN_STYLE = (
@@ -86,7 +87,7 @@ def AboutOnceDialog(
                 )
             rv.Divider()
             with rv.CardText(class_="pa-4"):
-                solara.Markdown(
+                MarkdownNewTab(
                     markdown_text,
                     style=markdown_style or _DEFAULT_MARKDOWN_STYLE,
                 )
