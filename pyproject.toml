@@ -11,7 +11,7 @@ dependencies = [
     "pysepal>=3.6.1",
     "solara",
     "starlette<1.0",
-    "ee-client>=2.5.0",
+    "ee-client>=2.6.2",
     "ipecharts",
     "reportlab>=4,<5",
 ]
