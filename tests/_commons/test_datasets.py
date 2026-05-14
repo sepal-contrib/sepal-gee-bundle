@@ -60,8 +60,8 @@ def test_landsat_helpers_match_platforms():
 
 
 def test_hansen_resolved_id_matches_pinned():
-    assert ds.HANSEN_GFC_ID == "UMD/hansen/global_forest_change_2024_v1_12"
-    assert ds.HANSEN_GFC_MAX_LOSS_YEAR == 2024
+    assert ds.HANSEN_GFC_ID == "UMD/hansen/global_forest_change_2025_v1_13"
+    assert ds.HANSEN_GFC_MAX_LOSS_YEAR == 2025
 
 
 def test_jrc_tmf_helpers():
