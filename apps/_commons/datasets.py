@@ -56,9 +56,9 @@ class DatasetDescriptor:
 HANSEN_GFC = DatasetDescriptor(
     key="HANSEN_GFC",
     probe="version_pattern",
-    last_reviewed="2026-04-27",
+    last_reviewed="2026-05-14",
     pattern="UMD/hansen/global_forest_change_{year}_v1_{minor}",
-    pinned={"year": 2024, "minor": 12},
+    pinned={"year": 2025, "minor": 13},
     notes="Yearly snapshot. `lossyear` band stores year - 2000.",
 )
 
