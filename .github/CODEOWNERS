@@ -1,0 +1,14 @@
+# Reviews on these paths require @dfguerrerom even if other reviewers
+# already approved the PR. Enforced via branch protection's "Require review
+# from Code Owners" toggle.
+#
+# Rationale: workflows run with GEE secrets; Dockerfile and conda env
+# install arbitrary code at build time; conftest executes on every test.
+
+/.github/                       @dfguerrerom
+/Dockerfile                     @dfguerrerom
+/docker-compose.yml             @dfguerrerom
+/docker-compose.override.yml    @dfguerrerom
+/pyproject.toml                 @dfguerrerom
+/sepal_environment.yml          @dfguerrerom
+/tests/conftest.py              @dfguerrerom
