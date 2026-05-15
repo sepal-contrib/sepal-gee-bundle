@@ -26,14 +26,14 @@ jobs:
 
       - name: Authenticate Earth Engine
         env:
-          GEE_SERVICE_ACCOUNT_KEY: ${{ secrets.GEE_SERVICE_ACCOUNT_KEY }}
+          EARTHENGINE_TOKEN: ${{ secrets.EARTHENGINE_TOKEN }}
         run: |
-          if [ -z "$GEE_SERVICE_ACCOUNT_KEY" ]; then
-            echo "::error::GEE_SERVICE_ACCOUNT_KEY secret is not set"
+          if [ -z "$EARTHENGINE_TOKEN" ]; then
+            echo "::error::EARTHENGINE_TOKEN secret is not set"
             exit 1
           fi
           mkdir -p "$HOME/.config/earthengine"
-          printf '%s' "$GEE_SERVICE_ACCOUNT_KEY" > "$HOME/.config/earthengine/service-account.json"
+          printf '%s' "$EARTHENGINE_TOKEN" > "$HOME/.config/earthengine/service-account.json"
 
       - name: Run dataset check
         id: check
