@@ -119,13 +119,14 @@ sepal-gee-bundle/
 
 | App | Status | What's done | What's missing |
 |-----|--------|-------------|----------------|
-| **GFC** | ✅ Done | Model, params, scripts (classification + stats), components (aoi, params, results), page wired, tests (8 passing) | Live GEE testing |
-| **Basin Rivers** | ⬜ Pending | CLAUDE.md with legacy analysis, stub page/model | params, scripts (watershed, gfc, stats, viz), components (point, params, delineation, dashboard), page wiring, tests |
-| **Coverage Analysis** | ⬜ Pending | CLAUDE.md with legacy analysis, stub page/model | params (C01→C02 migration), scripts (cloud masking, collection builder, analysis, export), components, page wiring, tests |
-| **FCDM** | ⬜ Pending | CLAUDE.md with legacy analysis, stub page/model | params (C01→C02 migration), scripts (forest mask, cloud masking, collection builder, NBR pipeline), components, page wiring, tests |
-| **TMF SEPAL** | ✅ Done | Model, params, scripts (`build_tmf_image`, `viz_params_for`), components (aoi, params, export), page wired, tests (pure params/viz/legend) | Live GEE testing; confirm `v1_2023` asset availability for the running EE user |
+| **GFC** | Done | Model, params, scripts (classification + stats), components (aoi, params, results), page wired, tests | Live GEE testing |
+| **Basin Rivers** | Done | Model, params, scripts (watershed, gfc_classification, statistics, visualization), components (point, params, delineation, dashboard), page wired, tests | Live GEE testing |
+| **Coverage Analysis** | Done | Model, params, scripts (cloud_masking, collection_builder, analysis, dashboard_stats), components (aoi, visualize, dashboard, export), page wired, tests | Live GEE testing |
+| **FCDM** | Done | Model, params (C02), scripts (forest_mask, cloud_masking, collection, nbr_pipeline), components (aoi, forest, params, run), page wired, tests | Live GEE smoke test (cloud-buffer-over-water bug from legacy fcdm#41 still needs reproduction) |
+| **TMF SEPAL** | Done | Model, params, scripts (`build_tmf_image`, `viz_params_for`), components (aoi, params, export), page wired, tests | Live GEE testing; confirm `v1_2023` asset availability for the running EE user |
+| **ALOS Mosaics** | Done | Model, params, scripts (kc_mosaic, Refined Lee, Quegan), components (aoi, viz, export), page wired, tests | Live GEE testing |
 
-Migration order: GFC ✅ → Basin Rivers → Coverage Analysis → FCDM
+All six apps have been migrated from their legacy `sepal_ui` repos.
 
 ## Bundle-Specific Conventions
 
