@@ -90,6 +90,34 @@ GFC_LEGEND = LegendData(
 )
 
 
+# --- SEPAL visualization metadata for exports ---
+# classify_gfc() returns an ee.Image whose single band is named ``constant``
+# (the default for ``ee.Image(0)``). The values mirror GFC_CLASSES with the
+# masked 0 omitted; the palette aligns with build_sld()'s ColorMapEntry list.
+GFC_CLASS_VALUES: list[int] = [
+    *range(1, GFC_MAX_YEAR + 1),
+    30,
+    40,
+    50,
+    51,
+]
+GFC_CLASS_LABELS: list[str] = [
+    *(f"loss {2000 + i}" for i in range(1, GFC_MAX_YEAR + 1)),
+    "non forest",
+    "stable forest",
+    "gain",
+    "gain + loss",
+]
+GFC_VIS_PARAMS: dict = {
+    "name": "gfc_classification",
+    "type": "categorical",
+    "bands": ["constant"],
+    "palette": HEX_PALETTE,
+    "values": GFC_CLASS_VALUES,
+    "labels": GFC_CLASS_LABELS,
+}
+
+
 # --- Classification ---
 def classify_gfc(
     aoi: ee.FeatureCollection,

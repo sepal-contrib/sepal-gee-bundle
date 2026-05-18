@@ -18,6 +18,7 @@ from pysepal.solara.components.export import (
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
 
+from apps._commons.gfc import GFC_VIS_PARAMS
 from apps.basin_rivers.params import (
     BASIN_WARN_THRESHOLD,
     GFC_LEGEND,
@@ -214,6 +215,7 @@ def DelineationStep(
                                 drive_folder="basin_rivers_exports",
                                 sepal_folder="basin_rivers",
                                 max_pixels=1e13,
+                                vis_params=GFC_VIS_PARAMS,
                             )
                         ),
                     ),

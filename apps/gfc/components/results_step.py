@@ -10,6 +10,7 @@ from pysepal.solara.components.export import (
     ResolvedExport,
 )
 
+from apps._commons.gfc import GFC_VIS_PARAMS
 from apps.gfc.params import GFC_MAX_YEAR
 
 from .dashboard_step import DashboardStep
@@ -46,6 +47,7 @@ def ResultsStep(state, sepal_map, gee_interface, legend_visible=None):
                     drive_folder="gfc_exports",
                     sepal_folder="gfc",
                     max_pixels=1e13,
+                    vis_params=GFC_VIS_PARAMS,
                 ),
             ),
             ExportSource(
