@@ -1,0 +1,82 @@
+## 0.2.0 (2026-05-19)
+
+### Feat
+
+- **gfc**: add GFC_VIS_PARAMS and wire into GFC and basin_rivers exports
+- **apps**: one-shot About dialogs, repo links, and select widget cleanup
+- **gee_source**: MapApp layout with live-app + source iframes
+- **fcdm**: calendar date pickers, slim sliders, and recent default dates
+- **ux**: tree-cover preset chips with custom field for gfc and fcdm
+- **_commons**: shared dataset registry + GFC primitives + weekly dataset-check
+- **gee_source**: add EE Apps JavaScript source extractor
+- **alos_mosaics**: add app tree (page.py already present)
+- **tmf_sepal**: add TMF visualization + statistics dashboard
+- **fcdm**: migrate from stub; expose custom forest-mask asset
+- **coverage_analysis**: migrate from stub; fold selection into visualize; add dashboard
+- **gfc**: basin-rivers-style dashboard + ipecharts loss chart
+- **basin_rivers**: PDF report export from dashboard modal
+- **basin_rivers**: thread legend_data reactive into DashboardStep
+- **basin_rivers**: CSS class hooks on dashboard charts for PDF capture
+- **pdf-report**: re-export public API from package __init__
+- **pdf-report**: PdfReportButton Solara component + capture template
+- **pdf-report**: build_pdf_report compose function with single long-page + A4 fallback
+- **pdf-report**: LegendFlowable with native vector gradients and chips
+- **pdf-report**: capture spec + PdfReportConfig dataclasses
+- **pdf-report**: scaffold pdf_report package
+- **pdf-report**: add reportlab runtime dep, pypdf dev dep
+- **basin_rivers**: dashboard polish — card header, thicker donuts, conditional timespan
+- **basin_rivers**: guard against too many upstream basins
+- **basin_rivers**: open dashboard in fullscreen modal
+- **basin_rivers**: wire theme_toggle into DashboardStep
+- **basin_rivers**: seed dashboard state when stats finish
+- **basin_rivers**: SettingsCard with variable/timespan/basin controls
+- **basin_rivers**: LossTrend line chart component
+- **basin_rivers**: CatchmentBar chart component with 3 modes
+- **basin_rivers**: CatchmentPie donut component
+- **basin_rivers**: OverallPie donut component
+- **basin_rivers**: dashboard package scaffold + echarts theme hook
+- **basin_rivers**: add dashboard reactive state (selected_var, timespan, basin filter)
+- **basin_rivers**: loss-trend dataframe helper
+- **basin_rivers**: catchment-bar dataframe helper
+- **basin_rivers**: catchment-pie dataframe helper
+- **basin_rivers**: overall-pie dataframe helper
+- **basin_rivers**: deterministic per-catchment color palette
+- **basin_rivers**: add dashboard palette and chart title tables
+- integrate LegendComponent into GFC app
+- add GFC_LEGEND constant for LegendComponent
+- add LegendData dataclasses for reusable legend component
+- Phase 0 infrastructure + Phase 1 GFC app migration
+- scaffold sepal-gee-bundle with 4 stub apps
+
+### Fix
+
+- **gfc**: bump Hansen GFC to 2025_v1_13 and track max year for defaults
+- **apps**: open About links in new tab, fix Doc/Bug links, FCDM legend & AOI
+- **pdf-report**: preserve SVG natural dimensions, use actual canvas scale, log all values
+- **pdf-report**: composite leaflet SVG overlays via native drawImage
+- **pdf-report**: wire button click via ipyvue.use_event; inline spinner while building
+- **pdf-report**: normalize leaflet SVG transforms; loading button; per-capture width_fraction; match CSV/PDF styling
+- **pdf-report**: pad computed page height to prevent content spilling to a second page
+- **pdf-report**: capture leaflet-container in fullscreen; native canvas for echarts; smaller echart PDF footprint
+- **pdf-report**: harder echarts instance search + html2canvas fallback
+- **pdf-report**: bypass AMD when loading html2canvas inside jupyter-vue
+- **pdf-report**: reparent logger under 'sepalui' so errors surface in app logs
+- **pdf-report**: add diagnostic logging + stricter html2canvas load check
+- **basin_rivers**: UX polish round 2 — contextual hints, compact info rows, clean restart
+- **basin_rivers**: review fixes — layer cleanup, basin-selection, validation, modal UX
+- **basin_rivers**: drop click-to-select on OverallPie (reacton Element vs ipywidget mismatch)
+- **basin_rivers**: declare ipecharts dep + hoist hooks above early return in OverallPie
+
+### Refactor
+
+- **gee_source**: persist extracted sources via SepalClient user-files
+- set a minimun zoom level
+- **gfc**: compute area stats on dashboard open instead of after visualize
+- **basin_rivers**: drop filter-mode basin selector and noisy outlet toasts
+- **pages**: migrate to session-scoped theme_state; default right panel unpinned
+- **apps**: route params/scripts through _commons; add Landsat 9
+- **basin_rivers**: separate trace from stats; compute-on-dashboard-open
+- **alos_mosaics**: migrate page.py to session-scoped ThemeState
+- **basin_rivers**: migrate page.py to session-scoped ThemeState
+- **basin_rivers**: UX polish — blue palette, legend, styled chips, renamed terms
+- **basin_rivers**: DashboardStep composes ipecharts dashboard
