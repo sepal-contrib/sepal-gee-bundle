@@ -31,7 +31,6 @@ def ViewModeToggle(state):
             solara.Button(
                 label="Live app",
                 value="app",
-                icon_name="mdi-earth",
                 small=True,
                 disabled=not has_app,
                 style={"flex": "1 1 0"},
@@ -39,7 +38,6 @@ def ViewModeToggle(state):
             solara.Button(
                 label="Source",
                 value="source",
-                icon_name="mdi-code-braces",
                 small=True,
                 disabled=not has_source,
                 style={"flex": "1 1 0"},

@@ -78,7 +78,7 @@ def ResultsStep(state, sepal_map, gee_interface, legend_visible=None):
         ExportLauncher(
             sources=export_sources,
             label="Export layers",
-            icon="mdi-cloud-download",
+            icon="",
             button_text=True,
             small=True,
             block=True,

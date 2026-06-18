@@ -127,7 +127,6 @@ def ExtractStep(state):
         TaskButtonComponent(
             label="Extract source",
             **btn_props,
-            icon="mdi-code-braces",
             external_busy=not (state.app_url.value or "").strip(),
             small=True,
             block=True,

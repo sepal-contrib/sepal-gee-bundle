@@ -169,7 +169,6 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
         TaskButtonComponent(
             label="Add layer",
             **btn_props,
-            icon="mdi-plus",
             external_busy=state.aoi.value is None,
             small=True,
             block=True,

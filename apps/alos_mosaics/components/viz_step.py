@@ -219,7 +219,6 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
         TaskButtonComponent(
             label="Add layer to map",
             **btn_props,
-            icon="mdi-layers-plus",
             external_busy=state.aoi.value is None,
             small=True,
             block=True,

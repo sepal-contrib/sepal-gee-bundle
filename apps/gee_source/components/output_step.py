@@ -139,7 +139,6 @@ def SaveControls(state):
         TaskButtonComponent(
             label="Save to SEPAL",
             **btn_props,
-            icon="mdi-content-save",
             external_busy=not has_code,
             small=True,
             block=True,
@@ -147,7 +146,6 @@ def SaveControls(state):
 
         solara.Button(
             label="Copy to clipboard",
-            icon_name="mdi-clipboard-text-outline",
             on_click=_copy_to_clipboard,
             disabled=not has_code,
             color="primary",

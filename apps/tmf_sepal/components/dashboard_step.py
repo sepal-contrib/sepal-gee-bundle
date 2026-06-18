@@ -79,10 +79,7 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
         small=True,
         class_="mt-2",
         disabled=not has_data,
-        children=[
-            rv.Icon(left=True, small=True, children=["mdi-view-dashboard"]),
-            "Open dashboard",
-        ],
+        children=["Open dashboard"],
     )
     ipyvue.use_event(btn, "click", lambda *_: open_dialog.set(True))
 
