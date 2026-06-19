@@ -55,25 +55,42 @@ def ExtractStep(state):
         suggested = _suggest_filename(request.app_url)
         return raw, html, suggested
 
+    def _clear_result():
+        """Reset all output state so the iframe falls back to its placeholder."""
+        state.raw_code.set("")
+        state.highlighted_html.set("")
+        state.filename.set("")
+        state.saved_path.set("")
+        state.live_url.set("")
+
     def _sync():
         if extract_task.pending or extract_task.cancelled:
             return
         if extract_task.error:
-            notifications.error(f"Extraction failed: {extract_task.exception}")
+            # Never render a failed fetch in the iframe — show the placeholder.
+            _clear_result()
+            notifications.error(
+                f"Extraction failed: {extract_task.exception}", timeout=8
+            )
             return
         if extract_task.finished and extract_task.value is not None:
             raw, html, suggested = extract_task.value
+            if not raw:
+                # The page loaded but carried no Earth Engine source (e.g. a
+                # non-EE URL). Don't render that page — keep the placeholder.
+                _clear_result()
+                notifications.warning(
+                    "No JavaScript source was found on that page — is it a "
+                    "public Earth Engine App?",
+                    timeout=8,
+                )
+                return
             state.raw_code.set(raw)
             state.highlighted_html.set(html)
             state.filename.set(suggested)
             state.saved_path.set("")
             state.live_url.set((state.app_url.value or "").strip())
-            if not raw:
-                notifications.warning(
-                    "No JavaScript source was found on that page — is it a public Earth Engine App?"
-                )
-            else:
-                notifications.success("Source extracted.")
+            notifications.success("Source extracted.")
 
     solara.use_effect(
         _sync,
