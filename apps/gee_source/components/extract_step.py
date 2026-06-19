@@ -121,7 +121,6 @@ def ExtractStep(state):
             outlined=True,
             dense=True,
             clearable=True,
-            prepend_inner_icon="mdi-link-variant",
         )
 
         TaskButtonComponent(
