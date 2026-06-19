@@ -133,7 +133,6 @@ def SaveControls(state):
             outlined=True,
             dense=True,
             disabled=not has_code,
-            prepend_inner_icon="mdi-file-document-outline",
         )
 
         TaskButtonComponent(
