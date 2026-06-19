@@ -93,7 +93,6 @@ def StatsStep(state, gee_interface, legend_visible=None, sepal_map=None):
         TaskButtonComponent(
             label="Compute area statistics",
             **btn_props,
-            icon="mdi-chart-pie",
             external_busy=state.result_image.value is None,
             small=True,
             block=True,

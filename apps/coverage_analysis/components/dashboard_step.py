@@ -183,7 +183,6 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
         TaskButtonComponent(
             label="Compute dashboard stats",
             **compute_btn,
-            icon="mdi-chart-box-outline",
             external_busy=state.collection.value is None,
             small=True,
             block=True,
@@ -195,10 +194,7 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
             small=True,
             class_="mt-2",
             disabled=not has_data,
-            children=[
-                rv.Icon(left=True, small=True, children=["mdi-view-dashboard"]),
-                "Open dashboard",
-            ],
+            children=["Open dashboard"],
         )
         ipyvue.use_event(open_btn, "click", lambda *_: open_dialog.set(True))
 

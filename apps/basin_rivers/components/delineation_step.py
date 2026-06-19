@@ -183,7 +183,6 @@ def DelineationStep(
         TaskButtonComponent(
             label="Trace watershed",
             **trace_btn,
-            icon="mdi-source-branch",
             external_busy=state.lat.value is None,
             small=True,
             block=True,
@@ -236,7 +235,7 @@ def DelineationStep(
             ExportLauncher(
                 sources=export_sources,
                 label="Export layers",
-                icon="mdi-cloud-download",
+                icon="",
                 button_text=True,
                 small=True,
                 block=True,

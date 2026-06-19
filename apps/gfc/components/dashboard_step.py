@@ -124,7 +124,6 @@ def DashboardStep(state, gee_interface, legend_visible=None, sepal_map=None):
     TaskButtonComponent(
         label="Compute & show dashboard",
         **compute_btn,
-        icon="mdi-view-dashboard",
         external_busy=state.result_image.value is None,
         small=True,
         block=True,

@@ -226,7 +226,6 @@ def RunStep(state, sepal_map, gee_interface, legend_visible=None):
         TaskButtonComponent(
             label="Run FCDM",
             **btn_props,
-            icon="mdi-play",
             external_busy=state.aoi.value is None or not state.sensors.value,
             small=True,
             block=True,
@@ -235,7 +234,7 @@ def RunStep(state, sepal_map, gee_interface, legend_visible=None):
         ExportLauncher(
             sources=export_sources,
             label="Export layers",
-            icon="mdi-cloud-download",
+            icon="",
             button_text=True,
             small=True,
             block=True,

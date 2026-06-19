@@ -255,7 +255,6 @@ def VisualizeStep(
         TaskButtonComponent(
             label="Show on map",
             **btn_props,
-            icon="mdi-map",
             external_busy=state.aoi.value is None,
             small=True,
             block=True,

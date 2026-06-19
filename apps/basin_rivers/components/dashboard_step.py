@@ -173,7 +173,6 @@ def DashboardStep(state, gee_interface, legend_visible=None, legend_data=None, s
     TaskButtonComponent(
         label="Compute & show dashboard",
         **stats_btn,
-        icon="mdi-view-dashboard",
         external_busy=not state.hybasin_list.value,
         small=True,
         block=True,
