@@ -50,7 +50,7 @@ def build_tmf_image(
         raise ValueError(f"year_start ({year_start}) must be <= year_end ({year_end})")
 
     collection = _collection_for(tmf_type)
-    mosaic = collection.mosaic().clip(aoi)
+    mosaic = collection.mosaic().clip(aoi.geometry())
 
     if tmf_type == "CHG":
         band_beg = year_start - TMF_MIN_YEAR

@@ -22,21 +22,22 @@ def get_forest_mask(
         forest_map: one of "gfc", "roadless", "no_map", or an asset id.
         year: baseline year for the forest mask.
         treecover: GFC tree-cover threshold (%) — used only if forest_map == "gfc".
-        aoi: ee.FeatureCollection or ee.Geometry.
+        aoi: ee.FeatureCollection — its ``.geometry()`` is used as the clip.
 
     Returns:
         (forest_mask, forest_mask_display) where forest_mask is the binary (or
         coded, for roadless) image used by the pipeline, and forest_mask_display
         is the same image prepared for display on the map.
     """
-    hansen = ee.Image(HANSEN_GFC).clip(aoi)
+    aoi_geom = aoi.geometry()
+    hansen = ee.Image(HANSEN_GFC).clip(aoi_geom)
 
     if forest_map == "no_map":
         forest_mask = hansen.select("treecover2000").gte(0)
         forest_mask_display = forest_mask.updateMask(forest_mask)
 
     elif forest_map == "roadless":
-        forest_mask = ee.ImageCollection(JRC_ROADLESS).mosaic().byte().clip(aoi)
+        forest_mask = ee.ImageCollection(JRC_ROADLESS).mosaic().byte().clip(aoi_geom)
         band = f"Dec{year + 1}"
         forest_mask_display = forest_mask.updateMask(forest_mask).select(band)
 

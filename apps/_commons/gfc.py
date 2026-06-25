@@ -138,7 +138,7 @@ def classify_gfc(
     start = start_year - 2000
     end = end_year - 2000
 
-    gfc = ee.Image(dataset_id).clip(aoi)
+    gfc = ee.Image(dataset_id).clip(aoi.geometry())
     treecov = gfc.select("treecover2000")
     lossy = gfc.select("lossyear").unmask(0)
     gain = gfc.select("gain")
