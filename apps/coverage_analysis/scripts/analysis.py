@@ -88,7 +88,7 @@ def reduce_measure(
         sub = sub.map(_unmask_1)
 
     name = f"{measure}_{band_suffix}"
-    return sub.reduce(reducer).rename(name).clip(aoi)
+    return sub.reduce(reducer).rename(name).clip(aoi.geometry())
 
 
 def compose_measure(

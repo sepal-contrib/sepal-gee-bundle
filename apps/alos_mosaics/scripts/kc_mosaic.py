@@ -120,7 +120,7 @@ def build_alos_mosaic(
         )
         image = image.addBands(fnf_image)
 
-    return image.clip(region)
+    return image.clip(region.geometry())
 
 
 # --- Band selection helpers --------------------------------------------------
