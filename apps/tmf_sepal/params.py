@@ -74,6 +74,34 @@ def change_viz_params(year_start: int, year_end: int) -> dict:
     }
 
 
+def export_vis_params_for(tmf_type: str, year_start: int, year_end: int) -> dict:
+    """Return SEPAL-convention ``set_viz_params`` kwargs for an exported TMF image.
+
+    Different shape from the map-side ``viz_params_for`` because pysepal's
+    :func:`set_viz_params` accepts ``name`` / ``type`` / ``bands`` / ``min`` /
+    ``max`` / ``palette`` / ``values`` / ``labels`` (no ``gamma`` / ``opacity``).
+    Attached to ``ResolvedExport.vis_params`` so the exported asset carries
+    ``visualization_*`` properties readable by SepalMap and other SEPAL recipes.
+    """
+    if tmf_type in ("DEG", "DEF"):
+        return {
+            "name": f"tmf_{tmf_type.lower()}",
+            "type": "continuous",
+            "min": year_start,
+            "max": year_end,
+            "palette": TMF_YEAR_PALETTE,
+        }
+    if tmf_type == "CHG":
+        return {
+            "name": "tmf_chg",
+            "type": "rgb",
+            "bands": [f"Dec{year_start}", f"Dec{year_start}", f"Dec{year_end}"],
+            "min": 1,
+            "max": 3,
+        }
+    raise ValueError(f"Unknown TMF type: {tmf_type!r}")
+
+
 # --- Legends ---
 def year_legend(tmf_type: str, year_start: int, year_end: int) -> LegendData:
     title = "Degradation year" if tmf_type == "DEG" else "Deforestation year"

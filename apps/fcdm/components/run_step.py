@@ -190,7 +190,24 @@ def RunStep(state, sepal_map, gee_interface, legend_visible=None):
             f"_{state.analysis_start.value[:4]}-{state.analysis_end.value[:4]}"
         )
 
-        def _mk(id_, label, image, scale=30, suffix=""):
+        delta_rnbr_export_vis = {
+            "name": "delta_rnbr",
+            "type": "continuous",
+            "bands": ["NBR"],
+            "min": DELTA_NBR_VIS["min"],
+            "max": DELTA_NBR_VIS["max"],
+            "palette": DELTA_NBR_VIS["palette"],
+        }
+        forest_mask_raw_vis = viz_forest_mask(state.forest_map.value)
+        forest_mask_export_vis = {
+            "name": "forest_mask",
+            "type": "continuous",
+            "min": forest_mask_raw_vis["min"],
+            "max": forest_mask_raw_vis["max"],
+            "palette": forest_mask_raw_vis["palette"],
+        }
+
+        def _mk(id_, label, image, scale=30, suffix="", vis=None):
             return ExportSource(
                 id=id_,
                 label=label,
@@ -205,21 +222,38 @@ def RunStep(state, sepal_map, gee_interface, legend_visible=None):
                         drive_folder="fcdm_exports",
                         sepal_folder="fcdm",
                         max_pixels=1e13,
+                        vis_params=vis,
                     )
                 ),
             )
 
         export_sources = (
-            _mk("delta_rnbr", "Delta rNBR (DDR filtered)", result.delta_rnbr, suffix="delta_rnbr"),
+            _mk(
+                "delta_rnbr",
+                "Delta rNBR (DDR filtered)",
+                result.delta_rnbr,
+                suffix="delta_rnbr",
+                vis=delta_rnbr_export_vis,
+            ),
             _mk(
                 "delta_rnbr_raw",
                 "Delta rNBR (no DDR filter)",
                 result.delta_rnbr_raw,
                 suffix="delta_rnbr_raw",
+                vis=delta_rnbr_export_vis,
             ),
+            # reference_rnbr / analysis_rnbr have no canonical SEPAL viz; the
+            # legacy app didn't render them on the map either, so we leave
+            # the asset's visualization_* properties unset.
             _mk("reference_rnbr", "Reference rNBR", result.reference_rnbr, suffix="reference_rnbr"),
             _mk("analysis_rnbr", "Analysis rNBR", result.analysis_rnbr, suffix="analysis_rnbr"),
-            _mk("forest_mask", "Forest mask", result.forest_mask, suffix="forest_mask"),
+            _mk(
+                "forest_mask",
+                "Forest mask",
+                result.forest_mask,
+                suffix="forest_mask",
+                vis=forest_mask_export_vis,
+            ),
         )
 
     with solara.Column():

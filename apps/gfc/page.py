@@ -62,7 +62,7 @@ def AboutContent():
     """About content rendered inside the MapApp dialog step."""
     MarkdownNewTab(
         ABOUT_TEXT,
-        style="img { width: 70%; display: block; margin: 16px auto 0; border-radius: 8px; }",
+        style=".markdown-new-tab img { width: 70%; display: block; margin: 16px auto 0; border-radius: 8px; }",
     )
 
 

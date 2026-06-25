@@ -16,7 +16,7 @@ from .markdown import MarkdownNewTab
 
 _DISMISSED = "1"
 _DEFAULT_MARKDOWN_STYLE = (
-    "img { width: 70%; display: block; margin: 16px auto 0; border-radius: 8px; }"
+    ".markdown-new-tab img { width: 70%; display: block; margin: 16px auto 0; border-radius: 8px; }"
 )
 
 
