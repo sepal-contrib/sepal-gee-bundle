@@ -19,12 +19,14 @@ import solara
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
 
+from apps._widgets import MarkdownNewTab
 from apps.alos_mosaics.params import (
     ALOS_YEARS,
     SPECKLE_FILTERS,
     VIZ_FNF,
     VIZ_LAYERS,
     VIZ_RFDI,
+    VIZ_RGB,
     fnf_available,
     fnf_legend,
     rfdi_legend,
@@ -39,6 +41,38 @@ from apps.alos_mosaics.scripts import (
 logger = logging.getLogger("sepal_gee_bundle.alos_mosaics")
 
 ALOS_LAYER_KEY = "alos_mosaic"
+
+SAR_RGB_INTERPRETATION = """\
+The map shows a false-colour composite of three SAR bands, one per RGB channel.
+
+## Channel mapping
+
+| Channel | Band | Sensitive to |
+|---------|------|--------------|
+| **Red** | HH (co-polarized) | hard surfaces, edges, water / land boundaries |
+| **Green** | HV (cross-polarized) | volume scattering (vegetation canopy) |
+| **Blue** | HH/HV ratio | differences in scattering mechanism |
+
+## Typical appearances
+
+| What you see on the map | What it *tends to* indicate |
+|---|---|
+| Bright green / yellow-green | dense vegetation, forest |
+| Olive / dull green | sparse vegetation, crops |
+| Pink / magenta | bare soil, dry surfaces |
+| Bright pink / white-pink | urban, built-up (corner reflectors) |
+| Dark blue / cyan tinges | flooded vegetation, wetlands |
+| Near-black | calm water, very smooth surfaces |
+
+These are **tendencies**, not classes. The exact colors depend on soil
+moisture, terrain roughness, and the acquisition geometry of the ALOS
+PALSAR mosaic for the selected year, so two pixels with the same colour
+can belong to different land covers.
+
+## Reference
+
+- [JAXA PALSAR mosaics — official portal and interpretation guide](https://www.eorc.jaxa.jp/ALOS/en/dataset/fnf_e.htm)
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +89,7 @@ class VizRequest:
 def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=None):
     notifications = use_notifications()
     cancel_reason = solara.use_ref(None)
+    rgb_info_open = solara.use_reactive(False)
 
     @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
     async def viz_task(request: VizRequest):
@@ -69,9 +104,7 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
             )
 
             task.step("Selecting bands")
-            viz_image = select_viz_bands(
-                image, request.viz_layer, request.year, request.db
-            )
+            viz_image = select_viz_bands(image, request.viz_layer, request.year, request.db)
             vis = viz_params_for(request.viz_layer, request.db)
 
             sepal_map.remove_layer(ALOS_LAYER_KEY, none_ok=True)
@@ -126,9 +159,7 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
             notifications.warning("Please select a year.")
             return
         if state.viz_layer.value == VIZ_FNF and not fnf_available(state.year.value):
-            notifications.warning(
-                "FNF data is only available up to 2017. Pick a different layer."
-            )
+            notifications.warning("FNF data is only available up to 2017. Pick a different layer.")
             return
         cancel_reason.current = None
         state.loading.value = True
@@ -146,13 +177,9 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
             )
         )
 
-    btn_props = use_task_button(
-        viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason
-    )
+    btn_props = use_task_button(viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason)
 
-    year_items = [
-        {"text": str(y), "value": y} for y in sorted(ALOS_YEARS, reverse=True)
-    ]
+    year_items = [{"text": str(y), "value": y} for y in sorted(ALOS_YEARS, reverse=True)]
     filter_items = [{"text": f["text"], "value": f["value"]} for f in SPECKLE_FILTERS]
 
     # Build radio items, disabling FNF if the current year is > 2017
@@ -160,9 +187,7 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
     viz_items = []
     for item in VIZ_LAYERS:
         disabled = item["value"] == VIZ_FNF and not fnf_ok
-        viz_items.append(
-            {"label": item["label"], "value": item["value"], "disabled": disabled}
-        )
+        viz_items.append({"label": item["label"], "value": item["value"], "disabled": disabled})
 
     with solara.Column():
         rv.Select(
@@ -206,14 +231,21 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
                     disabled=item["disabled"],
                 )
 
+        if state.viz_layer.value == VIZ_RGB:
+            rv.Btn(
+                text=True,
+                small=True,
+                class_="mt-n2 mb-2 align-self-start text-none",
+                on_click=lambda *_: rgb_info_open.set(True),
+                children=["How to read this image"],
+            )
+
         if not fnf_ok and state.viz_layer.value == VIZ_FNF:
             rv.Alert(
                 type="warning",
                 dense=True,
                 text=True,
-                children=[
-                    f"FNF not available for {state.year.value}. Pick RGB or RFDI."
-                ],
+                children=[f"FNF not available for {state.year.value}. Pick RGB or RFDI."],
             )
 
         TaskButtonComponent(
@@ -223,3 +255,32 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
             small=True,
             block=True,
         )
+
+    with rv.Dialog(
+        v_model=rgb_info_open.value,
+        on_v_model=rgb_info_open.set,
+        max_width="720",
+        scrollable=True,
+        eager=True,
+    ):
+        with rv.Card():
+            with rv.CardTitle(class_="d-flex align-center py-3 px-4"):
+                rv.Icon(
+                    color="primary",
+                    class_="mr-2",
+                    children=["mdi-image-filter-hdr"],
+                )
+                rv.Html(
+                    tag="span",
+                    class_="text-h6",
+                    children=["How to read the SAR RGB composite"],
+                )
+                rv.Spacer()
+                solara.Button(
+                    icon_name="mdi-close",
+                    icon=True,
+                    on_click=lambda *_: rgb_info_open.set(False),
+                )
+            rv.Divider()
+            with rv.CardText(class_="pa-4"):
+                MarkdownNewTab(SAR_RGB_INTERPRETATION)

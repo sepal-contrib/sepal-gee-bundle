@@ -12,7 +12,12 @@ from pysepal.solara.components.export import (
     ResolvedExport,
 )
 
-from apps.alos_mosaics.params import asset_name, fnf_available
+from apps.alos_mosaics.params import (
+    asset_name,
+    export_vis_fnf,
+    export_vis_rgb,
+    fnf_available,
+)
 from apps.alos_mosaics.scripts import select_export_bands
 from apps.alos_mosaics.scripts.kc_mosaic import select_fnf_band
 
@@ -61,6 +66,10 @@ def ExportStep(state, gee_interface):
                 texture=texture,
                 aux=aux,
             )
+            # Attach the RGB backscatter visualization only when the triplet
+            # is actually in the exported bands — otherwise the visualization
+            # references bands the asset doesn't carry.
+            mosaic_vis = export_vis_rgb(db) if backscatter else None
             sources.append(
                 ExportSource(
                     id="alos_mosaic",
@@ -75,6 +84,7 @@ def ExportStep(state, gee_interface):
                         drive_folder="alos_mosaics_exports",
                         sepal_folder="alos_mosaics",
                         max_pixels=1e13,
+                        vis_params=mosaic_vis,
                     ),
                 )
             )
@@ -93,6 +103,7 @@ def ExportStep(state, gee_interface):
                     aux=False,
                     fnf=True,
                 )
+                fnf_vis = export_vis_fnf(year)
                 sources.append(
                     ExportSource(
                         id="alos_fnf",
@@ -107,6 +118,7 @@ def ExportStep(state, gee_interface):
                             drive_folder="alos_mosaics_exports",
                             sepal_folder="alos_mosaics",
                             max_pixels=1e13,
+                            vis_params=fnf_vis,
                         ),
                     )
                 )

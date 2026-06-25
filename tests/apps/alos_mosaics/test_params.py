@@ -92,9 +92,22 @@ class TestLegends:
         assert len(leg.gradients) == 1
         assert len(leg.gradients[0].colors) == 2
 
-    def test_rgb_legend_db_vs_power(self):
-        assert "dB" in rgb_legend(db=True).gradients[0].title
-        assert "power" in rgb_legend(db=False).gradients[0].title
+    def test_rgb_legend_is_channel_mapping(self):
+        # RGB composites have no single colorbar, and labelling chips with
+        # specific land covers implies a precision SAR doesn't have. The
+        # legend stays honest: one chip per RGB channel, using the channel's
+        # own colour, labelled with the SAR band it carries. Land-cover
+        # tendencies are deferred to the "How to read this image" dialog.
+        for db in (True, False):
+            leg = rgb_legend(db=db)
+            assert leg.gradients == []
+            assert len(leg.items) == 3
+            colors = [item.color for item in leg.items]
+            assert colors == ["#ff0000", "#00ff00", "#0000ff"]
+            joined_labels = " | ".join(item.label for item in leg.items)
+            assert "HH" in joined_labels
+            assert "HV" in joined_labels
+            assert "HH/HV" in joined_labels
 
 
 class TestAssetName:

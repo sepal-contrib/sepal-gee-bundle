@@ -110,27 +110,53 @@ def rfdi_legend() -> LegendData:
 
 
 def rgb_legend(db: bool) -> LegendData:
-    vis = VIS_PARAM_DB if db else VIS_PARAM_POW
-    units = "dB" if db else "power"
+    """Channel-to-band mapping for the SAR RGB composite.
+
+    A multi-band RGB has no single colorbar, and chips that name specific
+    land covers ("forest = #a3b300") imply a precision SAR doesn't have.
+    So the legend stays honest: each chip is the literal color used to
+    encode one SAR band. Interpretation guidance (what colors *tend to*
+    mean for forest / water / urban) lives in the "How to read this
+    image" dialog, where the variability can be qualified properly.
+    """
+    del db  # channel mapping is identical in dB and power modes
     return LegendData(
-        gradients=[
-            GradientEntry(
-                title=f"HH backscatter ({units})",
-                colors=["#000000", "#ff0000"],
-                labels=[str(vis["min"][0]), str(vis["max"][0])],
-            ),
-            GradientEntry(
-                title=f"HV backscatter ({units})",
-                colors=["#000000", "#00ff00"],
-                labels=[str(vis["min"][1]), str(vis["max"][1])],
-            ),
-            GradientEntry(
-                title="HH/HV ratio",
-                colors=["#000000", "#0000ff"],
-                labels=[str(vis["min"][2]), str(vis["max"][2])],
-            ),
+        items=[
+            DiscreteEntry("HH (co-pol)", "#ff0000"),
+            DiscreteEntry("HV (cross-pol)", "#00ff00"),
+            DiscreteEntry("HH/HV ratio", "#0000ff"),
         ],
     )
+
+
+# --- Export visualization ----------------------------------------------------
+def export_vis_rgb(db: bool) -> dict:
+    """SEPAL ``set_viz_params`` kwargs for the HH/HV/HH-HV-ratio composite.
+
+    Attached to the exported ALOS mosaic when the backscatter triplet is
+    included, so the GEE asset carries ``visualization_*`` properties readable
+    by SepalMap and other SEPAL recipes.
+    """
+    vis = VIS_PARAM_DB if db else VIS_PARAM_POW
+    return {
+        "name": "alos_rgb",
+        "type": "rgb",
+        "bands": list(vis["bands"]),
+        "min": list(vis["min"]),
+        "max": list(vis["max"]),
+    }
+
+
+def export_vis_fnf(year: int) -> dict:
+    """SEPAL ``set_viz_params`` kwargs for the FNF band of ``year``."""
+    return {
+        "name": "alos_fnf",
+        "type": "categorical",
+        "bands": [f"fnf_{year}"],
+        "values": [code for code, _, _ in FNF_CLASSES],
+        "labels": [label for _, label, _ in FNF_CLASSES],
+        "palette": list(VIS_PARAM_FNF["palette"]),
+    }
 
 
 # --- Export naming -----------------------------------------------------------
