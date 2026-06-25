@@ -9,7 +9,7 @@ from pysepal.solara.components.export import (
     ResolvedExport,
 )
 
-from apps.tmf_sepal.params import asset_basename
+from apps.tmf_sepal.params import asset_basename, export_vis_params_for
 
 logger = logging.getLogger("sepal_gee_bundle.tmf_sepal")
 
@@ -27,6 +27,7 @@ def ExportStep(state, gee_interface):
         year_start = state.year_start.value
         year_end = state.year_end.value
         default_name = asset_basename(aoi_name, tmf_type, year_start, year_end)
+        export_vis = export_vis_params_for(tmf_type, year_start, year_end)
 
         export_sources = (
             ExportSource(
@@ -42,6 +43,7 @@ def ExportStep(state, gee_interface):
                     drive_folder="tmf_exports",
                     sepal_folder="tmf",
                     max_pixels=1e13,
+                    vis_params=export_vis,
                 ),
             ),
             ExportSource(
