@@ -4,13 +4,22 @@ from typing import Literal
 
 from pysepal.solara import use_theme_dark
 
-from apps.tmf_sepal.params import TMF_CHG_CLASSES, TMF_MAX_YEAR, TMF_MIN_YEAR, TMF_YEAR_PALETTE
+from apps.tmf_sepal.params import (
+    TMF_CHG_TRANSITION_CLASSES,
+    TMF_MAX_YEAR,
+    TMF_MIN_YEAR,
+    TMF_YEAR_PALETTE,
+)
 
 Theme = Literal["dark", "light"]
 
 # CHG class code -> hex colour
-CHG_CLASS_COLORS: dict[int, str] = {code: color for code, _label, color in TMF_CHG_CLASSES}
-CHG_CLASS_LABELS: dict[int, str] = {code: label for code, label, _color in TMF_CHG_CLASSES}
+CHG_CLASS_COLORS: dict[int, str] = {
+    code: color for code, _label, color in TMF_CHG_TRANSITION_CLASSES
+}
+CHG_CLASS_LABELS: dict[int, str] = {
+    code: label for code, label, _color in TMF_CHG_TRANSITION_CLASSES
+}
 
 
 def _hex_to_rgb(h: str) -> tuple[int, int, int]:

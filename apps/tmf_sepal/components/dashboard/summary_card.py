@@ -87,7 +87,7 @@ def SummaryCard(rows: list, tmf_type: str, year_start: int, year_end: int):
         elif tmf_type == "CHG":
             _StatItem(
                 "mdi-shape",
-                "Classes present",
+                "Transitions present",
                 str(sum(1 for r in rows if float(r["area_ha"]) > 0)),
             )
 

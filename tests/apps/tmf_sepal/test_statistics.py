@@ -1,6 +1,6 @@
 """Pure-Python tests for parse_area_stats (no GEE)."""
 
-from apps.tmf_sepal.params import TMF_CHG_CLASSES
+from apps.tmf_sepal.params import TMF_CHG_TRANSITION_CLASSES
 from apps.tmf_sepal.scripts.statistics import parse_area_stats
 
 
@@ -20,7 +20,7 @@ class TestParseAreaStatsChg:
         assert len(rows) == 2
 
         by_code = {r["code"]: r for r in rows}
-        expected = {c: (lbl, col) for c, lbl, col in TMF_CHG_CLASSES}
+        expected = {c: (lbl, col) for c, lbl, col in TMF_CHG_TRANSITION_CLASSES}
         assert by_code[1]["label"] == expected[1][0]
         assert by_code[1]["color"] == expected[1][1]
         assert by_code[1]["area_ha"] == 123.46

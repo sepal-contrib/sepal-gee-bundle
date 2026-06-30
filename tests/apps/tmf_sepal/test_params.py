@@ -3,7 +3,8 @@
 import pytest
 
 from apps.tmf_sepal.params import (
-    TMF_CHG_CLASSES,
+    TMF_CHG_TRANSITION_CLASSES,
+    TMF_CHG_TRANSITION_REMAP,
     TMF_MAX_YEAR,
     TMF_MIN_YEAR,
     TMF_TYPES,
@@ -60,20 +61,39 @@ class TestVizParams:
         assert p["max"] == 2020
         assert p["palette"] == TMF_YEAR_PALETTE
 
-    def test_change_viz_params_band_triplet(self):
-        p = change_viz_params(1995, 2010)
-        assert p["bands"] == ["Dec1995", "Dec1995", "Dec2010"]
+    def test_change_viz_params_is_transition(self):
+        p = change_viz_params()
+        assert p["bands"] == ["transition"]
         assert p["min"] == 1
-        assert p["max"] == 3
+        assert p["max"] == len(TMF_CHG_TRANSITION_CLASSES)
+        assert p["palette"] == [c for _code, _label, c in TMF_CHG_TRANSITION_CLASSES]
 
     def test_viz_params_for_dispatch(self):
         assert viz_params_for("DEG", 2000, 2020) == year_viz_params(2000, 2020)
         assert viz_params_for("DEF", 2000, 2020) == year_viz_params(2000, 2020)
-        assert viz_params_for("CHG", 2000, 2020) == change_viz_params(2000, 2020)
+        assert viz_params_for("CHG", 2000, 2020) == change_viz_params()
 
     def test_viz_params_for_rejects_unknown(self):
         with pytest.raises(ValueError):
             viz_params_for("XXX", 2000, 2020)
+
+
+class TestTransitionRemap:
+    def test_codes_are_valid_1_to_7(self):
+        valid = {code for code, _label, _color in TMF_CHG_TRANSITION_CLASSES}
+        assert valid == set(range(1, 8))
+        assert set(TMF_CHG_TRANSITION_REMAP.values()) <= valid
+
+    def test_sample_transitions(self):
+        r = TMF_CHG_TRANSITION_REMAP
+        assert r[11] == 1  # undisturbed -> undisturbed: stable forest
+        assert r[22] == 1  # stable degraded: stable forest
+        assert r[12] == 2  # undisturbed -> degraded: new degradation
+        assert r[13] == 3 and r[23] == 3  # forest -> deforested: new deforestation
+        assert r[33] == 4  # stable deforested
+        assert r[34] == 5  # deforested -> regrowth
+        assert r[55] == 6  # water
+        assert 16 not in r  # undisturbed -> other falls through to "Other change"
 
 
 class TestLegends:
@@ -87,10 +107,10 @@ class TestLegends:
         assert "Degradation" in year_legend("DEG", 2000, 2020).gradients[0].title
         assert "Deforestation" in year_legend("DEF", 2000, 2020).gradients[0].title
 
-    def test_change_legend_items_match_classes(self):
+    def test_change_legend_items_match_transition_classes(self):
         leg = change_legend()
-        assert len(leg.items) == len(TMF_CHG_CLASSES)
-        for item, (_code, label, color) in zip(leg.items, TMF_CHG_CLASSES):
+        assert len(leg.items) == len(TMF_CHG_TRANSITION_CLASSES)
+        for item, (_code, label, color) in zip(leg.items, TMF_CHG_TRANSITION_CLASSES):
             assert item.label == label
             assert item.color == color
 

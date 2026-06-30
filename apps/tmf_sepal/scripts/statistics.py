@@ -3,16 +3,16 @@
 For DEG / DEF, pixels hold the year of the disturbance event: we group the
 area by year and the resulting rows are keyed by year (e.g. 2005).
 
-For CHG (AnnualChanges), the image is a stack of per-year bands whose pixel
-values are class codes 1..6 (see ``TMF_CHG_CLASSES``). We compute class-wise
-area using the end-year band.
+For CHG, the image holds a single ``transition`` band with the start->end
+transition class codes 1..7 (see ``TMF_CHG_TRANSITION_CLASSES``); we compute
+area per transition class.
 """
 
 from __future__ import annotations
 
 import ee
 
-from apps.tmf_sepal.params import TMF_CHG_CLASSES
+from apps.tmf_sepal.params import TMF_CHG_TRANSITION_CLASSES
 
 
 def _group_by_class_image(stats_image: ee.Image) -> ee.Image:
@@ -27,15 +27,14 @@ def compute_area_stats(
     year_end: int,
     scale: int = 30,
 ) -> dict:
-    """Server-side area (ha) per class/year for the given TMF layer.
+    """Server-side area (ha) per class for the given TMF layer.
 
-    For ``CHG`` we reduce on the ``Dec<year_end>`` band of the stack. For
-    ``DEG`` / ``DEF`` we reduce on the single year-of-event band.
+    The image is single-band for every type — the year-of-event band for
+    ``DEG`` / ``DEF``, the ``transition`` class band for ``CHG`` — so we group
+    area by that band's value. ``tmf_type`` / ``year_end`` are retained for
+    call-site compatibility.
     """
-    if tmf_type == "CHG":
-        stats_band = tmf_image.select([f"Dec{year_end}"]).rename("class")
-    else:
-        stats_band = tmf_image.rename("class").toInt()
+    stats_band = tmf_image.rename("class").toInt()
 
     area_image = _group_by_class_image(stats_band)
 
@@ -49,8 +48,8 @@ def compute_area_stats(
 
 
 # Lookup tables for CHG ------------------------------------------------------
-_CHG_LABEL_BY_CODE = {code: label for code, label, _color in TMF_CHG_CLASSES}
-_CHG_COLOR_BY_CODE = {code: color for code, _label, color in TMF_CHG_CLASSES}
+_CHG_LABEL_BY_CODE = {code: label for code, label, _color in TMF_CHG_TRANSITION_CLASSES}
+_CHG_COLOR_BY_CODE = {code: color for code, _label, color in TMF_CHG_TRANSITION_CLASSES}
 
 
 def parse_area_stats(raw_result: dict, tmf_type: str) -> list[dict]:

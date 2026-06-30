@@ -56,7 +56,7 @@ def OverallPie(rows: list, tmf_type: str):
 
     if tmf_type == "CHG":
         data = _chg_data(rows)
-        title_text = "Annual change class shares"
+        title_text = "Annual change transitions"
     else:
         data = _year_data(rows)
         title_text = "Degradation by year" if tmf_type == "DEG" else "Deforestation by year"

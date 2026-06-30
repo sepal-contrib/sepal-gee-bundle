@@ -9,7 +9,7 @@ from __future__ import annotations
 import ee
 
 from apps.tmf_sepal.params import (
-    TMF_MIN_YEAR,
+    TMF_CHG_TRANSITION_REMAP,
     change_viz_params,
     chg_dataset_id,
     def_dataset_id,
@@ -41,8 +41,8 @@ def build_tmf_image(
     For DEG/DEF the result is a single-band mosaic masked to pixels where the
     year-of-event band falls within ``[year_start, year_end]``.
 
-    For CHG the result is a multi-band stack ``DecYYYY`` covering the selected
-    years (1990 = band 0).
+    For CHG the result is a single ``transition`` band holding the start->end
+    transition class (1..7, see ``TMF_CHG_TRANSITION_CLASSES``).
     """
     if tmf_type not in VALID_TYPES:
         raise ValueError(f"Unknown TMF type: {tmf_type!r}")
@@ -53,9 +53,18 @@ def build_tmf_image(
     mosaic = collection.mosaic().clip(aoi)
 
     if tmf_type == "CHG":
-        band_beg = year_start - TMF_MIN_YEAR
-        band_end = year_end - TMF_MIN_YEAR
-        return mosaic.select(ee.List.sequence(band_beg, band_end))
+        start = mosaic.select([f"Dec{year_start}"]).rename("cls")
+        end = mosaic.select([f"Dec{year_end}"]).rename("cls")
+        combo = start.multiply(10).add(end).toInt()
+        return (
+            combo.remap(
+                list(TMF_CHG_TRANSITION_REMAP),
+                list(TMF_CHG_TRANSITION_REMAP.values()),
+                7,  # default: "Other change"
+            )
+            .rename("transition")
+            .toInt()
+        )
 
     mask = mosaic.lte(ee.Number(year_end)).And(mosaic.gte(ee.Number(year_start))).selfMask()
     return mosaic.mask(mask)
@@ -66,5 +75,5 @@ def viz_params_for(tmf_type: str, year_start: int, year_end: int) -> dict:
     if tmf_type in ("DEG", "DEF"):
         return year_viz_params(year_start, year_end)
     if tmf_type == "CHG":
-        return change_viz_params(year_start, year_end)
+        return change_viz_params()
     raise ValueError(f"Unknown TMF type: {tmf_type!r}")

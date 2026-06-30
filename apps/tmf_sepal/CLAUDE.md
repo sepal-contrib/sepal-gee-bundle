@@ -43,14 +43,19 @@ asset is not available to the running GEE user, override `TMF_VERSION_YEAR`.
 
 - `DEG` / `DEF`: `collection.mosaic().clip(aoi)`, then `selfMask()` pixels whose
   year value is in `[year_start, year_end]`.
-- `CHG`: `collection.mosaic().clip(aoi).select(ee.List.sequence(start-1990, end-1990))`
-  — produces a year-stack used as an RGB composite.
+- `CHG`: compares the start-year class (`Dec<start>`) to the end-year class
+  (`Dec<end>`) per pixel and remaps `(start*10 + end)` via
+  `TMF_CHG_TRANSITION_REMAP` into a single `transition` band (codes 1..7, see
+  `TMF_CHG_TRANSITION_CLASSES`). The map, legend, statistics dashboard, and
+  exported asset all describe these 7 transition classes.
+  (The legacy `[DecSTART, DecSTART, DecEND]` RGB composite was replaced — it
+  could not match a discrete class legend.)
 
 `scripts/tmf_process.viz_params_for` returns the map visualization params:
 
 - `DEG`/`DEF`: `{min, max, palette=[blue, yellow, red]}` over the year range.
-- `CHG`: `{bands=[DecSTART, DecSTART, DecEND], min=1, max=3, gamma=1}` — matches
-  the legacy behaviour (start/start/end triplet, categorical 1..3 scaling).
+- `CHG`: `{bands=["transition"], min=1, max=7, palette=<transition colors>}` — a
+  categorical class map that matches `change_legend()` (the 7 transition classes).
 
 ## Parameters
 
@@ -60,10 +65,14 @@ Defined in `params.py`:
 - `TMF_MIN_YEAR = 1990`, `TMF_MAX_YEAR = TMF_VERSION_YEAR`.
 - `TMF_TYPES` — select items for the layer picker.
 - `TMF_YEAR_PALETTE = ["#0000ff", "#ffff00", "#ff0000"]`.
-- `TMF_CHG_CLASSES` — categorical legend entries used by the discrete legend
-  for the CHG layer.
+- `TMF_CHG_CLASSES` — the 6 raw per-year AnnualChanges class codes; the inputs
+  to the transition remap.
+- `TMF_CHG_TRANSITION_CLASSES` / `TMF_CHG_TRANSITION_REMAP` — the 7 start->end
+  transition classes (code, label, colour) and the `(start*10+end)->code` remap
+  that drive the CHG map layer, its legend, the statistics dashboard, and the
+  exported asset's viz.
 - `year_legend(...)` / `change_legend()` — build `LegendData` for
-  `LegendComponent`.
+  `LegendComponent` (`change_legend()` is the 7-class transition legend).
 - `asset_basename(aoi_name, tmf_type, y0, y1)` — default export filename.
 
 ## File layout
@@ -125,7 +134,7 @@ modal (`rv.Dialog(max_width="1400px", scrollable=True, eager=True)`) with:
   deforested / classified, depending on layer), event year range / classes
   present, user-selected year range, and TMF layer type.
 - **OverallPie** — donut of area shares. For **CHG** the slices are the
-  six `TMF_CHG_CLASSES` (coloured from `params.TMF_CHG_CLASSES`). For
+  seven `TMF_CHG_TRANSITION_CLASSES` (start->end transition classes). For
   **DEG/DEF** the slices are years, coloured along the
   `TMF_YEAR_PALETTE` gradient stretched to the data range. The legend uses
   `type="scroll"` so a wide year range paginates (`‹ … › 1/N`) instead of
