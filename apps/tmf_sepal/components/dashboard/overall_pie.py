@@ -69,7 +69,7 @@ def OverallPie(rows: list, tmf_type: str):
         backgroundColor="#1e1e1e00",
         title=Title(text=title_text, left="center", textStyle={"fontSize": 14}),
         tooltip=Tooltip(trigger="item", formatter="{b}: {c} ha ({d}%)"),
-        legend=Legend(orient="horizontal", bottom=0, textStyle={"fontSize": 11}),
+        legend=Legend(type="scroll", orient="horizontal", bottom=0, textStyle={"fontSize": 11}),
         toolbox=Toolbox(
             show=True,
             feature={"saveAsImage": {"show": True, "title": "Save PNG"}},

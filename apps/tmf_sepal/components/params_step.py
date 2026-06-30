@@ -108,6 +108,7 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
         cancel_reason.current = None
         state.loading.value = True
         state.result_image.value = None
+        state.stats_rows.set([])
         if legend_visible is not None:
             legend_visible.set(False)
         viz_task(
@@ -119,13 +120,9 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             )
         )
 
-    btn_props = use_task_button(
-        viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason
-    )
+    btn_props = use_task_button(viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason)
 
-    year_items = [
-        {"text": str(y), "value": y} for y in range(TMF_MIN_YEAR, TMF_MAX_YEAR + 1)
-    ]
+    year_items = [{"text": str(y), "value": y} for y in range(TMF_MIN_YEAR, TMF_MAX_YEAR + 1)]
     type_items = [{"text": t["label"], "value": t["value"]} for t in TMF_TYPES]
 
     with solara.Column():
@@ -152,7 +149,7 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
         )
 
         TaskButtonComponent(
-            label="Add layer",
+            label="Process & add layer",
             **btn_props,
             external_busy=state.aoi.value is None,
             small=True,

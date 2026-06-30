@@ -36,7 +36,7 @@ interest and year range.
 1. Select an **Area of Interest**.
 2. Pick a **TMF layer** (Degradation year, Deforestation year, or Annual
    change) and a **year range** in 1990-{TMF_VERSION_YEAR}.
-3. Click **Add layer** to render the TMF image on the map.
+3. Click **Process & add layer** to render the TMF image on the map.
 4. Use the **Export** step to send the image to a GEE asset, Google Drive, or
    SEPAL.
 
@@ -112,9 +112,7 @@ def TmfSepalPage():
         {
             "title": "Parameters",
             "icon": "mdi-tune",
-            "content": [
-                ParamsStep(state, sepal_map, gee_interface, legend_data, legend_visible)
-            ],
+            "content": [ParamsStep(state, sepal_map, gee_interface, legend_data, legend_visible)],
         },
         {
             "title": "Statistics",

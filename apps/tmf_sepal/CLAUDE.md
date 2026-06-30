@@ -15,7 +15,7 @@ dropped in favour of pysepal/Solara patterns.
 
 1. **AOI** — `AoiStep` (pysepal `AoiView`, `methods=["-SHAPE", "-POINTS"]`).
 2. **Parameters** — pick a TMF layer (`DEG`/`DEF`/`CHG`) and start/end year in
-   `1990..TMF_VERSION_YEAR`, then click *Add layer*.
+   `1990..TMF_VERSION_YEAR`, then click *Process & add layer*.
 3. **Export** — choose a scale and use `ExportLauncher` to send the TMF image
    (and optionally the AOI boundary) to GEE / Drive / SEPAL.
 
@@ -127,7 +127,9 @@ modal (`rv.Dialog(max_width="1400px", scrollable=True, eager=True)`) with:
 - **OverallPie** — donut of area shares. For **CHG** the slices are the
   six `TMF_CHG_CLASSES` (coloured from `params.TMF_CHG_CLASSES`). For
   **DEG/DEF** the slices are years, coloured along the
-  `TMF_YEAR_PALETTE` gradient stretched to the data range.
+  `TMF_YEAR_PALETTE` gradient stretched to the data range. The legend uses
+  `type="scroll"` so a wide year range paginates (`‹ … › 1/N`) instead of
+  crowding the bottom of the chart.
 - **YearTrend** — bar chart of area per year for **DEG/DEF** only (each
   bar tinted via the same year gradient). Hidden for **CHG** because
   stats_rows are keyed by class, not year.
@@ -140,8 +142,13 @@ modal (`rv.Dialog(max_width="1400px", scrollable=True, eager=True)`) with:
 - `page.py` passes `legend_visible` and `sepal_map` through to `StatsStep`
   → `DashboardStep`. The dialog hides the legend on open, restores it on
   close.
-- The inline `_StatsPie` + `_StatsTable` in `StatsStep` remain, so basic
-  numbers are visible without opening the modal.
+- The inline `_StatsTable` in `StatsStep` shows the raw numbers without
+  opening the modal. The old inline `_StatsPie` donut was removed — the
+  by-year/by-class charts now live **only** in the dashboard (no duplicate
+  by-year chart in the right panel).
+- `params_step`'s *Process & add layer* button clears `stats_rows` on click,
+  so stale statistics from a previous layer / year range can't linger in the
+  panel or auto-reopen the dashboard with outdated data.
 - Auto-opens whenever a fresh `stats_rows` list arrives (watches
   `id(rows)`), matching the gfc / basin-rivers UX.
 
