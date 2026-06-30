@@ -67,9 +67,7 @@ def GeeSourcePage():
 
     def _sync_iframe():
         iframe_widget.app_url = state.live_url.value
-        iframe_widget.srcdoc = build_source_srcdoc(
-            state.highlighted_html.value, highlight_css()
-        )
+        iframe_widget.srcdoc = build_source_srcdoc(state.highlighted_html.value, highlight_css())
         iframe_widget.mode = state.view_mode.value
 
     solara.use_effect(

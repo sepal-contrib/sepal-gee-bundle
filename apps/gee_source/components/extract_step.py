@@ -69,9 +69,7 @@ def ExtractStep(state):
         if extract_task.error:
             # Never render a failed fetch in the iframe — show the placeholder.
             _clear_result()
-            notifications.error(
-                f"Extraction failed: {extract_task.exception}", timeout=8
-            )
+            notifications.error(f"Extraction failed: {extract_task.exception}", timeout=8)
             return
         if extract_task.finished and extract_task.value is not None:
             raw, html, suggested = extract_task.value

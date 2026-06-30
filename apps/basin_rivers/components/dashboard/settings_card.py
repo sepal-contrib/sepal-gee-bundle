@@ -13,12 +13,7 @@ def SettingsCard(state):
     if df is not None and not df.empty:
         # Order basins by total area (largest first) so the list mirrors the
         # catchment-bar ordering the user sees in the graphs.
-        basins = (
-            df.groupby("basin")["area"]
-            .sum()
-            .sort_values(ascending=False)
-            .index.tolist()
-        )
+        basins = df.groupby("basin")["area"].sum().sort_values(ascending=False).index.tolist()
     else:
         basins = list(state.hybasin_list.value)
     year_min = state.year_start.value
@@ -36,10 +31,7 @@ def SettingsCard(state):
             rv.Select(
                 v_model=state.selected_var.value,
                 on_v_model=state.selected_var.set,
-                items=[
-                    {"text": label, "value": key}
-                    for key, label in VARIABLE_LABELS.items()
-                ],
+                items=[{"text": label, "value": key} for key, label in VARIABLE_LABELS.items()],
                 label="Variable",
             )
 

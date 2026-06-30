@@ -187,7 +187,9 @@ def _probe_static(ee: Any, d: DatasetDescriptor, today: datetime | None = None) 
     # Templated static (e.g. HydroSHEDS hybas_{level}) — pick a canonical level for liveness.
     probe_id = asset.replace("{level}", "8") if "{level}" in asset else asset
     if not _asset_exists(ee, probe_id):
-        return CheckResult(d.key, STATUS_ERROR, dict(d.pinned), message=f"asset not found: {probe_id}")
+        return CheckResult(
+            d.key, STATUS_ERROR, dict(d.pinned), message=f"asset not found: {probe_id}"
+        )
 
     age = _iso_date_age_days(d.last_reviewed, today=today)
     if age > STALE_REVIEW_THRESHOLD_DAYS:
@@ -222,7 +224,11 @@ def check_registry(
     for d in registry:
         probe = PROBES.get(d.probe)
         if probe is None:
-            results.append(CheckResult(d.key, STATUS_ERROR, dict(d.pinned), message=f"unknown probe: {d.probe}"))
+            results.append(
+                CheckResult(
+                    d.key, STATUS_ERROR, dict(d.pinned), message=f"unknown probe: {d.probe}"
+                )
+            )
             continue
         try:
             if d.probe == "static":

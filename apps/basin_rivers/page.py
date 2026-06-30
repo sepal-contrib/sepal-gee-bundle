@@ -15,6 +15,8 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
+from apps._widgets import add_satellite_basemap
+
 from .components import DelineationStep, ParamsStep, PointStep
 from .model import BasinRiversState
 
@@ -35,11 +37,13 @@ def BasinRiversPage():
 
     state = solara.use_memo(lambda: BasinRiversState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(
-            gee_interface=gee_interface,
-            fullscreen=True,
-            theme_state=theme_state,
-            min_zoom=3,
+        lambda: add_satellite_basemap(
+            SepalMap(
+                gee_interface=gee_interface,
+                fullscreen=True,
+                theme_state=theme_state,
+                min_zoom=3,
+            )
         ),
         [id(gee_interface)],
     )

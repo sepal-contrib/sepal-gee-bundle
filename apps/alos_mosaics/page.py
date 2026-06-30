@@ -20,7 +20,7 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
-from apps._widgets import AboutOnceDialog, MarkdownNewTab
+from apps._widgets import AboutOnceDialog, MarkdownNewTab, add_satellite_basemap
 
 from .components import AoiStep, ExportStep, VizStep
 from .model import AlosMosaicsState
@@ -78,11 +78,13 @@ def AlosMosaicsPage():
 
     state = solara.use_memo(lambda: AlosMosaicsState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(
-            gee_interface=gee_interface,
-            fullscreen=True,
-            theme_state=theme_state,
-            min_zoom=3,
+        lambda: add_satellite_basemap(
+            SepalMap(
+                gee_interface=gee_interface,
+                fullscreen=True,
+                theme_state=theme_state,
+                min_zoom=3,
+            )
         ),
         [id(gee_interface)],
     )
@@ -117,9 +119,7 @@ def AlosMosaicsPage():
         {
             "title": "Visualization",
             "icon": "mdi-map",
-            "content": [
-                VizStep(state, sepal_map, gee_interface, legend_data, legend_visible)
-            ],
+            "content": [VizStep(state, sepal_map, gee_interface, legend_data, legend_visible)],
         },
         {
             "title": "Export",

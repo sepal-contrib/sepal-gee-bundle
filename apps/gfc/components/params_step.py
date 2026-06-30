@@ -95,13 +95,10 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             )
         )
 
-    btn_props = use_task_button(
-        viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason
-    )
+    btn_props = use_task_button(viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason)
 
     year_items = [
-        {"text": str(2000 + i), "value": 2000 + i}
-        for i in range(GFC_MIN_YEAR, GFC_MAX_YEAR + 1)
+        {"text": str(2000 + i), "value": 2000 + i} for i in range(GFC_MIN_YEAR, GFC_MAX_YEAR + 1)
     ]
 
     current_tc = state.treecover.value

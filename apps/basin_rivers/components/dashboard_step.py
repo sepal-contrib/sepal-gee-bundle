@@ -166,9 +166,7 @@ def DashboardStep(state, gee_interface, legend_visible=None, legend_data=None, s
 
     solara.use_effect(_on_open_change, [open_dialog.value])
 
-    stats_btn = use_task_button(
-        stats_task, on_start=_start_stats, cancel_reason_ref=stats_cancel
-    )
+    stats_btn = use_task_button(stats_task, on_start=_start_stats, cancel_reason_ref=stats_cancel)
 
     TaskButtonComponent(
         label="Compute & show dashboard",
