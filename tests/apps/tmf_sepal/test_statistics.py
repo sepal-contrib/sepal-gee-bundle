@@ -1,11 +1,23 @@
 """Pure-Python tests for parse_area_stats (no GEE)."""
 
-from apps.tmf_sepal.params import TMF_CHG_TRANSITION_CLASSES
+from apps.tmf_sepal.params import TMF_CHG_TRANSITION_CLASSES, TMF_TRANSITION_MAIN_CLASSES
 from apps.tmf_sepal.scripts.statistics import parse_area_stats
 
 
 def _raw(groups):
     return {"groups": groups}
+
+
+class TestParseAreaStatsTrans:
+    def test_main_codes_get_labels_and_colors(self):
+        rows = parse_area_stats(
+            _raw([{"group": 1, "sum": 10.0}, {"group": 7, "sum": 5.0}]), "TRANS"
+        )
+        by_code = {r["code"]: r for r in rows}
+        exp = {c: (lbl, col) for c, lbl, col in TMF_TRANSITION_MAIN_CLASSES}
+        assert by_code[1]["label"] == exp[1][0]
+        assert by_code[1]["color"] == exp[1][1]
+        assert by_code[7]["label"] == exp[7][0]
 
 
 class TestParseAreaStatsChg:

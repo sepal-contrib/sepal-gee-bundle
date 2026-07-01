@@ -16,8 +16,8 @@ def YearTrend(rows: list, tmf_type: str):
     if not rows:
         return
 
-    # CHG rows are keyed by class code, not year — the year view is meaningless.
-    if tmf_type == "CHG":
+    # CHG / TRANS rows are keyed by class code, not year — no year view.
+    if tmf_type in ("CHG", "TRANS"):
         return
 
     year_rows = sorted(

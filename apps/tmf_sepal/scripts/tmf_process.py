@@ -10,14 +10,17 @@ import ee
 
 from apps.tmf_sepal.params import (
     TMF_CHG_TRANSITION_REMAP,
+    TMF_SUBTYPE_TO_MAIN,
     change_viz_params,
     chg_dataset_id,
     def_dataset_id,
     deg_dataset_id,
+    transition_main_viz_params,
+    transitionmap_id,
     year_viz_params,
 )
 
-VALID_TYPES = ("DEG", "DEF", "CHG")
+VALID_TYPES = ("DEG", "DEF", "CHG", "TRANS")
 
 
 def _collection_for(tmf_type: str) -> ee.ImageCollection:
@@ -27,6 +30,8 @@ def _collection_for(tmf_type: str) -> ee.ImageCollection:
         return ee.ImageCollection(def_dataset_id())
     if tmf_type == "CHG":
         return ee.ImageCollection(chg_dataset_id())
+    if tmf_type == "TRANS":
+        return ee.ImageCollection(transitionmap_id())
     raise ValueError(f"Unknown TMF type: {tmf_type!r} (expected one of {VALID_TYPES})")
 
 
@@ -43,14 +48,31 @@ def build_tmf_image(
 
     For CHG the result is a single ``transition`` band holding the start->end
     transition class (1..7, see ``TMF_CHG_TRANSITION_CLASSES``).
+
+    For TRANS the result is a single ``transition_main`` band holding the JRC
+    TransitionMap main class (1..9, see ``TMF_TRANSITION_MAIN_CLASSES``); it is
+    whole-period and ignores the year range.
     """
     if tmf_type not in VALID_TYPES:
         raise ValueError(f"Unknown TMF type: {tmf_type!r}")
-    if year_start > year_end:
-        raise ValueError(f"year_start ({year_start}) must be <= year_end ({year_end})")
 
     collection = _collection_for(tmf_type)
     mosaic = collection.mosaic().clip(aoi)
+
+    if tmf_type == "TRANS":
+        return (
+            mosaic.remap(
+                list(TMF_SUBTYPE_TO_MAIN),
+                list(TMF_SUBTYPE_TO_MAIN.values()),
+                0,  # subtype codes outside the recode -> masked by selfMask
+            )
+            .selfMask()
+            .rename("transition_main")
+            .toInt()
+        )
+
+    if year_start > year_end:
+        raise ValueError(f"year_start ({year_start}) must be <= year_end ({year_end})")
 
     if tmf_type == "CHG":
         start = mosaic.select([f"Dec{year_start}"]).rename("cls")
@@ -76,4 +98,6 @@ def viz_params_for(tmf_type: str, year_start: int, year_end: int) -> dict:
         return year_viz_params(year_start, year_end)
     if tmf_type == "CHG":
         return change_viz_params()
+    if tmf_type == "TRANS":
+        return transition_main_viz_params()
     raise ValueError(f"Unknown TMF type: {tmf_type!r}")

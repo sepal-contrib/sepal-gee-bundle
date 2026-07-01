@@ -76,6 +76,7 @@ def CoverageAnalysisPage():
 
     legend_data = solara.use_reactive({})
     legend_visible = solara.use_reactive(False)
+    legend_collapsed = solara.use_reactive(False)
 
     steps_data = [
         {
@@ -137,6 +138,8 @@ def CoverageAnalysisPage():
     LegendComponent(
         legend_data=legend_data.value,
         visible=legend_visible.value,
+        collapsed=legend_collapsed.value,
+        event_set_collapsed=legend_collapsed.set,
     )
 
     AboutOnceDialog(

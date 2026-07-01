@@ -126,7 +126,7 @@ def _DashboardContent(state):
         )
 
         with rv.Row(dense=True, class_="mb-2"):
-            if tmf_type == "CHG":
+            if tmf_type in ("CHG", "TRANS"):
                 with rv.Col(cols=12):
                     OverallPie(rows, tmf_type)
             else:

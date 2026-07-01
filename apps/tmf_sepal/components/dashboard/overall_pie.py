@@ -6,18 +6,25 @@ from ipecharts import EChartsWidget
 from ipecharts.option import Legend, Option, Title, Toolbox, Tooltip
 from ipecharts.option.series import Pie
 
-from .theme import CHG_CLASS_COLORS, CHG_CLASS_LABELS, use_echarts_theme, year_color
+from .theme import (
+    CHG_CLASS_COLORS,
+    CHG_CLASS_LABELS,
+    MAIN_CLASS_COLORS,
+    MAIN_CLASS_LABELS,
+    use_echarts_theme,
+    year_color,
+)
 
 
-def _chg_data(rows: list[dict]) -> list[dict]:
+def _class_data(rows: list[dict], color_by_code: dict, label_by_code: dict) -> list[dict]:
     data: list[dict] = []
     for r in rows:
         code = int(r["code"])
         area = float(r["area_ha"])
         if area <= 0:
             continue
-        color = CHG_CLASS_COLORS.get(code) or r.get("color")
-        label = CHG_CLASS_LABELS.get(code) or r.get("label") or f"class {code}"
+        color = color_by_code.get(code) or r.get("color")
+        label = label_by_code.get(code) or r.get("label") or f"class {code}"
         item: dict = {"value": round(area, 2), "name": label}
         if color:
             item["itemStyle"] = {"color": color}
@@ -55,8 +62,11 @@ def OverallPie(rows: list, tmf_type: str):
         return
 
     if tmf_type == "CHG":
-        data = _chg_data(rows)
-        title_text = "Annual change transitions"
+        data = _class_data(rows, CHG_CLASS_COLORS, CHG_CLASS_LABELS)
+        title_text = "Change between two years"
+    elif tmf_type == "TRANS":
+        data = _class_data(rows, MAIN_CLASS_COLORS, MAIN_CLASS_LABELS)
+        title_text = "Transition map (full record)"
     else:
         data = _year_data(rows)
         title_text = "Degradation by year" if tmf_type == "DEG" else "Deforestation by year"
@@ -69,15 +79,26 @@ def OverallPie(rows: list, tmf_type: str):
         backgroundColor="#1e1e1e00",
         title=Title(text=title_text, left="center", textStyle={"fontSize": 14}),
         tooltip=Tooltip(trigger="item", formatter="{b}: {c} ha ({d}%)"),
-        legend=Legend(type="scroll", orient="horizontal", bottom=0, textStyle={"fontSize": 11}),
+        legend=Legend(
+            # Categorical layers (few items) wrap onto up to ~2 rows inside a
+            # capped, centered width; year layers (many items) stay a single
+            # paginated row. ECharts scroll legends are single-row by design,
+            # so the categorical case uses a plain (wrapping) legend.
+            type="plain" if tmf_type in ("CHG", "TRANS") else "scroll",
+            orient="horizontal",
+            bottom=0,
+            left="center",
+            width="60%",
+            textStyle={"fontSize": 10},
+        ),
         toolbox=Toolbox(
             show=True,
             feature={"saveAsImage": {"show": True, "title": "Save PNG"}},
         ),
         series=[
             Pie(
-                radius=["25%", "70%"],
-                center=["50%", "45%"],
+                radius=["25%", "62%"],
+                center=["50%", "42%"],
                 data=data,
                 label={
                     "show": True,

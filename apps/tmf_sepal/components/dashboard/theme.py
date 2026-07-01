@@ -8,6 +8,7 @@ from apps.tmf_sepal.params import (
     TMF_CHG_TRANSITION_CLASSES,
     TMF_MAX_YEAR,
     TMF_MIN_YEAR,
+    TMF_TRANSITION_MAIN_CLASSES,
     TMF_YEAR_PALETTE,
 )
 
@@ -19,6 +20,12 @@ CHG_CLASS_COLORS: dict[int, str] = {
 }
 CHG_CLASS_LABELS: dict[int, str] = {
     code: label for code, label, _color in TMF_CHG_TRANSITION_CLASSES
+}
+MAIN_CLASS_COLORS: dict[int, str] = {
+    code: color for code, _label, color in TMF_TRANSITION_MAIN_CLASSES
+}
+MAIN_CLASS_LABELS: dict[int, str] = {
+    code: label for code, label, _color in TMF_TRANSITION_MAIN_CLASSES
 }
 
 

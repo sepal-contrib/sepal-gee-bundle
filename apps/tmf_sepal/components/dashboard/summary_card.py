@@ -15,19 +15,22 @@ def _fmt_area(ha: float) -> str:
 _TYPE_LABEL = {
     "DEG": "Degradation year",
     "DEF": "Deforestation year",
-    "CHG": "Annual change",
+    "CHG": "Change between two years",
+    "TRANS": "Transition map (full record)",
 }
 
 _TYPE_TOTAL_LABEL = {
     "DEG": "Degraded area",
     "DEF": "Deforested area",
     "CHG": "Classified area",
+    "TRANS": "Mapped area",
 }
 
 _TYPE_TOTAL_ICON = {
     "DEG": "mdi-tree",
     "DEF": "mdi-tree-outline",
     "CHG": "mdi-layers",
+    "TRANS": "mdi-source-branch",
 }
 
 
@@ -84,10 +87,10 @@ def SummaryCard(rows: list, tmf_type: str, year_start: int, year_end: int):
                 "Years with events",
                 str(sum(1 for r in rows if float(r["area_ha"]) > 0)),
             )
-        elif tmf_type == "CHG":
+        elif tmf_type in ("CHG", "TRANS"):
             _StatItem(
                 "mdi-shape",
-                "Transitions present",
+                "Transitions present" if tmf_type == "CHG" else "Classes present",
                 str(sum(1 for r in rows if float(r["area_ha"]) > 0)),
             )
 

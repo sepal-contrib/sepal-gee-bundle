@@ -25,13 +25,22 @@ def chg_dataset_id() -> str:
     return jrc_tmf_id("AnnualChanges")
 
 
+def transitionmap_id() -> str:
+    return jrc_tmf_id("TransitionMap_Subtypes")
+
+
 # --- TMF layer types ---
 # Degradation, Deforestation share the same "year of event" schema
 # Annual Change is a per-year categorical band stack.
 TMF_TYPES = [
     {"value": "DEG", "label": "Degradation year", "icon": "mdi-tree"},
     {"value": "DEF", "label": "Deforestation year", "icon": "mdi-tree-outline"},
-    {"value": "CHG", "label": "Annual change", "icon": "mdi-calendar-range"},
+    {"value": "CHG", "label": "Change between two years", "icon": "mdi-calendar-range"},
+    {
+        "value": "TRANS",
+        "label": "Transition map (full record)",
+        "icon": "mdi-source-branch",
+    },
 ]
 
 # --- Visualization ---
@@ -88,6 +97,66 @@ TMF_CHG_TRANSITION_REMAP = {
     65: 6,  # anything -> water
 }
 
+# JRC TransitionMap "main classes" (recode of TransitionMap_Subtypes). Each pixel
+# carries its full 1990..TMF_VERSION_YEAR disturbance trajectory. Indexed 1..9 with
+# the official JRC palette ("Other land cover" white -> light grey so it stays
+# visible on the basemap).
+TMF_TRANSITION_MAIN_CLASSES = [
+    (1, "Undisturbed TMF", "#005000"),
+    (2, "Degraded TMF", "#648723"),
+    (3, "TMF regrowth", "#d2fa3c"),
+    (4, "Deforested - tree plantations", "#ffc894"),
+    (5, "Deforested - water", "#00c896"),
+    (6, "Deforested - other land cover", "#ffe664"),
+    (7, "Recent deforestation/degradation", "#fa8c0a"),
+    (8, "Permanent/seasonal water", "#0046a0"),
+    (9, "Other land cover", "#d9d9d9"),
+]
+
+# TransitionMap_Subtypes code -> main class index above (verbatim from the JRC
+# GEE tutorial recode). Subtype codes not listed map to 0 and are masked out.
+TMF_SUBTYPE_TO_MAIN = {
+    10: 1,
+    11: 1,
+    12: 1,
+    21: 2,
+    22: 2,
+    23: 2,
+    24: 2,
+    25: 2,
+    26: 2,
+    61: 2,
+    62: 2,
+    31: 3,
+    32: 3,
+    33: 3,
+    63: 3,
+    64: 3,
+    81: 4,
+    82: 4,
+    83: 4,
+    84: 4,
+    85: 4,
+    86: 4,
+    73: 5,
+    74: 5,
+    41: 6,
+    42: 6,
+    65: 6,
+    66: 6,
+    51: 7,
+    52: 7,
+    53: 7,
+    54: 7,
+    67: 7,
+    71: 8,
+    72: 8,
+    91: 9,
+    92: 9,
+    93: 9,
+    94: 9,
+}
+
 
 def year_viz_params(year_start: int, year_end: int) -> dict:
     """Visualization params for DEG/DEF (single year band)."""
@@ -110,6 +179,20 @@ def change_viz_params() -> dict:
         "min": 1,
         "max": len(TMF_CHG_TRANSITION_CLASSES),
         "palette": [color for _code, _label, color in TMF_CHG_TRANSITION_CLASSES],
+    }
+
+
+def transition_main_viz_params() -> dict:
+    """Visualization params for the JRC TransitionMap main-class layer.
+
+    The image carries a single ``transition_main`` band holding codes 1..9
+    (see ``TMF_TRANSITION_MAIN_CLASSES``); render it categorically.
+    """
+    return {
+        "bands": ["transition_main"],
+        "min": 1,
+        "max": len(TMF_TRANSITION_MAIN_CLASSES),
+        "palette": [color for _code, _label, color in TMF_TRANSITION_MAIN_CLASSES],
     }
 
 
@@ -139,6 +222,15 @@ def export_vis_params_for(tmf_type: str, year_start: int, year_end: int) -> dict
             "labels": [label for _code, label, _color in TMF_CHG_TRANSITION_CLASSES],
             "palette": [color for _code, _label, color in TMF_CHG_TRANSITION_CLASSES],
         }
+    if tmf_type == "TRANS":
+        return {
+            "name": "tmf_transition_main",
+            "type": "categorical",
+            "bands": ["transition_main"],
+            "values": [code for code, _label, _color in TMF_TRANSITION_MAIN_CLASSES],
+            "labels": [label for _code, label, _color in TMF_TRANSITION_MAIN_CLASSES],
+            "palette": [color for _code, _label, color in TMF_TRANSITION_MAIN_CLASSES],
+        }
     raise ValueError(f"Unknown TMF type: {tmf_type!r}")
 
 
@@ -160,6 +252,13 @@ def change_legend() -> LegendData:
     """Discrete legend for the CHG start->end transition class map."""
     return LegendData(
         items=[DiscreteEntry(label, color) for _code, label, color in TMF_CHG_TRANSITION_CLASSES],
+    )
+
+
+def transition_main_legend() -> LegendData:
+    """Discrete legend for the JRC TransitionMap main-class layer."""
+    return LegendData(
+        items=[DiscreteEntry(label, color) for _code, label, color in TMF_TRANSITION_MAIN_CLASSES],
     )
 
 

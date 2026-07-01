@@ -14,8 +14,10 @@ dropped in favour of pysepal/Solara patterns.
 ## Workflow
 
 1. **AOI** — `AoiStep` (pysepal `AoiView`, `methods=["-SHAPE", "-POINTS"]`).
-2. **Parameters** — pick a TMF layer (`DEG`/`DEF`/`CHG`) and start/end year in
-   `1990..TMF_VERSION_YEAR`, then click *Process & add layer*.
+2. **Parameters** — pick a TMF layer (`DEG`/`DEF`/`CHG`/`TRANS`). The year-based
+   layers take a start/end year in `1990..TMF_VERSION_YEAR`; the `TRANS`
+   TransitionMap is whole-period and hides the year selects. Then click
+   *Process & add layer*.
 3. **Export** — choose a scale and use `ExportLauncher` to send the TMF image
    (and optionally the AOI boundary) to GEE / Drive / SEPAL.
 
@@ -24,18 +26,19 @@ Legend and notifications are wired through pysepal (`LegendComponent`,
 
 ## GEE datasets
 
-All three collections share the `projects/JRC/TMF/v1_<YEAR>/...` prefix.
-`TMF_VERSION_YEAR` in `params.py` controls which release is used. Bump it when
-the JRC publishes a newer version.
+These collections share the `projects/JRC/TMF/v1_<YEAR>/...` prefix.
+`TMF_VERSION_YEAR` (from `apps._commons.datasets`) controls which release is
+used. Bump it there when the JRC publishes a newer version.
 
-| Type | Collection                                                  | Band schema                                         |
-|------|-------------------------------------------------------------|-----------------------------------------------------|
-| DEG  | `projects/JRC/TMF/v1_<YEAR>/DegradationYear`                | Single band: year of degradation event              |
-| DEF  | `projects/JRC/TMF/v1_<YEAR>/DeforestationYear`              | Single band: year of deforestation event            |
-| CHG  | `projects/JRC/TMF/v1_<YEAR>/AnnualChanges`                  | One `DecYYYY` band per year (1990..`TMF_MAX_YEAR`)  |
+| Type  | Collection                                            | Band schema                                        |
+|-------|-------------------------------------------------------|----------------------------------------------------|
+| DEG   | `projects/JRC/TMF/v1_<YEAR>/DegradationYear`          | Single band: year of degradation event             |
+| DEF   | `projects/JRC/TMF/v1_<YEAR>/DeforestationYear`        | Single band: year of deforestation event           |
+| CHG   | `projects/JRC/TMF/v1_<YEAR>/AnnualChanges`            | One `DecYYYY` band per year (1990..`TMF_MAX_YEAR`) |
+| TRANS | `projects/JRC/TMF/v1_<YEAR>/TransitionMap_Subtypes`   | Single band: ~84 transition subtype codes (10..94) |
 
-Note: the legacy app used `v1_2022`; this bundle defaults to `v1_2023`. If that
-asset is not available to the running GEE user, override `TMF_VERSION_YEAR`.
+Note: the bundle pins `v1_2025` via `apps._commons.datasets`. If an asset is not
+available to the running GEE user, override the pinned year there.
 
 ## Algorithm
 
@@ -50,12 +53,18 @@ asset is not available to the running GEE user, override `TMF_VERSION_YEAR`.
   exported asset all describe these 7 transition classes.
   (The legacy `[DecSTART, DecSTART, DecEND]` RGB composite was replaced — it
   could not match a discrete class legend.)
+- `TRANS`: loads `TransitionMap_Subtypes`, mosaics, and remaps the ~84 subtype
+  codes to the 9 JRC main classes via `TMF_SUBTYPE_TO_MAIN` into a single
+  `transition_main` band (1..9, see `TMF_TRANSITION_MAIN_CLASSES`). Whole-period
+  (1990..`TMF_VERSION_YEAR`); ignores the year range. Unlisted subtypes are masked.
 
 `scripts/tmf_process.viz_params_for` returns the map visualization params:
 
 - `DEG`/`DEF`: `{min, max, palette=[blue, yellow, red]}` over the year range.
 - `CHG`: `{bands=["transition"], min=1, max=7, palette=<transition colors>}` — a
   categorical class map that matches `change_legend()` (the 7 transition classes).
+- `TRANS`: `{bands=["transition_main"], min=1, max=9, palette=<official colors>}`
+  — categorical, matches `transition_main_legend()` (the 9 JRC main classes).
 
 ## Parameters
 
@@ -71,8 +80,12 @@ Defined in `params.py`:
   transition classes (code, label, colour) and the `(start*10+end)->code` remap
   that drive the CHG map layer, its legend, the statistics dashboard, and the
   exported asset's viz.
-- `year_legend(...)` / `change_legend()` — build `LegendData` for
-  `LegendComponent` (`change_legend()` is the 7-class transition legend).
+- `TMF_TRANSITION_MAIN_CLASSES` / `TMF_SUBTYPE_TO_MAIN` — the 9 official JRC
+  TransitionMap main classes (idx, label, colour; "Other" white -> grey for
+  visibility) and the subtype->main recode used by the `TRANS` layer.
+- `year_legend(...)` / `change_legend()` / `transition_main_legend()` — build
+  `LegendData` for `LegendComponent` (the year gradient, the 7-class CHG, and the
+  9-class TransitionMap legends respectively).
 - `asset_basename(aoi_name, tmf_type, y0, y1)` — default export filename.
 
 ## File layout

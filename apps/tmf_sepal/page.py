@@ -34,8 +34,10 @@ interest and year range.
 ### Workflow
 
 1. Select an **Area of Interest**.
-2. Pick a **TMF layer** (Degradation year, Deforestation year, or Annual
-   change) and a **year range** in 1990-{TMF_VERSION_YEAR}.
+2. Pick a **TMF layer**: *Degradation year*, *Deforestation year*, *Change
+   between two years*, or the full-record *Transition map*. The year-based
+   layers take a **year range** in 1990-{TMF_VERSION_YEAR}; the Transition map
+   is whole-period.
 3. Click **Process & add layer** to render the TMF image on the map.
 4. Use the **Export** step to send the image to a GEE asset, Google Drive, or
    SEPAL.
@@ -45,6 +47,7 @@ interest and year range.
 - JRC/TMF/v1_{TMF_VERSION_YEAR}/DegradationYear
 - JRC/TMF/v1_{TMF_VERSION_YEAR}/DeforestationYear
 - JRC/TMF/v1_{TMF_VERSION_YEAR}/AnnualChanges
+- JRC/TMF/v1_{TMF_VERSION_YEAR}/TransitionMap_Subtypes
 
 ### References
 
@@ -86,6 +89,7 @@ def TmfSepalPage():
 
     legend_data = solara.use_reactive({})
     legend_visible = solara.use_reactive(False)
+    legend_collapsed = solara.use_reactive(False)
 
     steps_data = [
         {
@@ -145,6 +149,8 @@ def TmfSepalPage():
     LegendComponent(
         legend_data=legend_data.value,
         visible=legend_visible.value,
+        collapsed=legend_collapsed.value,
+        event_set_collapsed=legend_collapsed.set,
     )
 
     AboutOnceDialog(

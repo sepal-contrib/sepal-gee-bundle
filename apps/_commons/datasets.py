@@ -79,7 +79,8 @@ JRC_TMF = DatasetDescriptor(
     last_reviewed="2026-04-27",
     pattern="projects/JRC/TMF/v1_{year}/{product}",
     pinned={"year": 2025},
-    notes="`product` is one of DegradationYear / DeforestationYear / AnnualChanges.",
+    notes="`product` is one of DegradationYear / DeforestationYear / "
+    "AnnualChanges / TransitionMap_Subtypes.",
 )
 
 
@@ -92,6 +93,7 @@ JRC_TMF_VERSION_YEAR: int = JRC_TMF.pinned["year"]
 JRC_TMF_DEGRADATION_ID = jrc_tmf_id("DegradationYear")
 JRC_TMF_DEFORESTATION_ID = jrc_tmf_id("DeforestationYear")
 JRC_TMF_ANNUAL_CHANGES_ID = jrc_tmf_id("AnnualChanges")
+JRC_TMF_TRANSITION_MAP_ID = jrc_tmf_id("TransitionMap_Subtypes")
 
 
 # ---------------------------------------------------------------------------
@@ -314,6 +316,7 @@ __all__ = [
     "JRC_TMF_ANNUAL_CHANGES_ID",
     "JRC_TMF_DEFORESTATION_ID",
     "JRC_TMF_DEGRADATION_ID",
+    "JRC_TMF_TRANSITION_MAP_ID",
     "JRC_TMF_VERSION_YEAR",
     "LANDSAT_PLATFORMS",
     "REGISTRY",
