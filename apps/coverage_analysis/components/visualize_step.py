@@ -55,7 +55,7 @@ def _valid_date(value: str | None) -> bool:
 
 
 @dataclass(frozen=True, slots=True)
-class VizRequest:
+class VisualizeRequest:
     aoi_fc: object
     measure: str
     start: str
@@ -76,7 +76,7 @@ def VisualizeStep(
     previous_layers = solara.use_ref([])
 
     @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
-    async def viz_task(request: VizRequest):
+    async def viz_task(request: VisualizeRequest):
         with notifications.track("Visualizing measure", total_steps=3) as task:
             task.step("Assembling multi-sensor collection")
             coll = build_collection(
@@ -187,7 +187,7 @@ def VisualizeStep(
         if legend_visible is not None:
             legend_visible.set(False)
         viz_task(
-            VizRequest(
+            VisualizeRequest(
                 aoi_fc=state.aoi.value.feature_collection,
                 measure=state.measure.value,
                 start=state.start_date.value,
