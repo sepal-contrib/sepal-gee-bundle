@@ -96,7 +96,7 @@ apps/alos_mosaics/
 ├── components/
 │   ├── __init__.py
 │   ├── aoi_step.py        # AoiView wrapper (container methods only)
-│   ├── viz_step.py        # year + speckle + ls_mask + db + RGB/RFDI/FNF radio + TaskButton
+│   ├── visualize_step.py  # year + speckle + ls_mask + db + RGB/RFDI/FNF radio + TaskButton
 │   └── export_step.py     # band switches + ExportLauncher (fixed 25 m scale)
 └── scripts/
     ├── __init__.py
@@ -114,12 +114,12 @@ apps/alos_mosaics/
 | `parameter/directory.py` (SEPAL dirs)                       | Dropped — `ExportLauncher` handles target folders        |
 | `scripts/kc_mosaic.py` (`create`)                           | `scripts/kc_mosaic.build_alos_mosaic`                    |
 | `scripts/_quegan.py`, `scripts/_refined_lee.py`             | Ported verbatim to `scripts/_quegan.py`, `_refined_lee.py` |
-| `scripts/display.py` (`display_result`)                     | `scripts.select_viz_bands` + `viz_params_for` + `viz_step` |
+| `scripts/display.py` (`display_result`)                     | `scripts.select_viz_bands` + `viz_params_for` + `visualize_step` |
 | `scripts/exports.py` (`export_to_asset`, `export_to_sepal`) | `ExportLauncher` + `ExportSource` / `ResolvedExport`     |
 | `scripts/gdrive.py`, `scripts/download.py`                  | Dropped — pysepal export pipeline handles this           |
 | `scripts/gee.py`                                            | Dropped — pysepal handles task polling                   |
-| `tile/process.py`                                           | Folded into `components/viz_step.py`                     |
-| `tile/visualization.py`                                     | `components/viz_step.py`                                 |
+| `tile/process.py`                                           | Folded into `components/visualize_step.py`                     |
+| `tile/visualization.py`                                     | `components/visualize_step.py`                                 |
 | `tile/export.py`                                            | `components/export_step.py`                              |
 
 ## Caveats & things to verify live

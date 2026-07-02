@@ -22,7 +22,7 @@ from pysepal.solara.notifications import NotificationProvider
 
 from apps._widgets import AboutOnceDialog, MarkdownNewTab, add_satellite_basemap
 
-from .components import AoiStep, ExportStep, VizStep
+from .components import AoiStep, ExportStep, VisualizeStep
 from .model import AlosMosaicsState
 
 logger = setup_logging(logger_name="sepal_gee_bundle.alos_mosaics")
@@ -120,7 +120,7 @@ def AlosMosaicsPage():
         {
             "title": "Visualization",
             "icon": "mdi-map",
-            "content": [VizStep(state, sepal_map, gee_interface, legend_data, legend_visible)],
+            "content": [VisualizeStep(state, sepal_map, gee_interface, legend_data, legend_visible)],
         },
         {
             "title": "Export",
