@@ -18,7 +18,9 @@ def ViewModeToggle(state):
         if value:
             state.view_mode.set(value)
 
-    with solara.Div(style={"width": "100%", "display": "flex", "justify-content": "center"}):
+    with solara.Div(
+        style={"width": "100%", "display": "flex", "justify-content": "center"}
+    ):
         with solara.ToggleButtonsSingle(
             value=state.view_mode.value,
             on_value=_set,

@@ -80,7 +80,9 @@ def DashboardStep(state, gee_interface, legend_visible=None, sepal_map=None):
             return
         if compute_task.finished and compute_task.value is not None:
             state.stats_rows.set(compute_task.value)
-            notifications.success(f"Area statistics computed ({len(compute_task.value)} classes)")
+            notifications.success(
+                f"Area statistics computed ({len(compute_task.value)} classes)"
+            )
             open_dialog.set(True)
 
     solara.use_effect(

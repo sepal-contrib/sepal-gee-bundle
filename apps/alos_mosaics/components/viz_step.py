@@ -69,7 +69,9 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
             )
 
             task.step("Selecting bands")
-            viz_image = select_viz_bands(image, request.viz_layer, request.year, request.db)
+            viz_image = select_viz_bands(
+                image, request.viz_layer, request.year, request.db
+            )
             vis = viz_params_for(request.viz_layer, request.db)
 
             sepal_map.remove_layer(ALOS_LAYER_KEY, none_ok=True)
@@ -124,7 +126,9 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
             notifications.warning("Please select a year.")
             return
         if state.viz_layer.value == VIZ_FNF and not fnf_available(state.year.value):
-            notifications.warning("FNF data is only available up to 2017. Pick a different layer.")
+            notifications.warning(
+                "FNF data is only available up to 2017. Pick a different layer."
+            )
             return
         cancel_reason.current = None
         state.loading.value = True
@@ -142,9 +146,13 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
             )
         )
 
-    btn_props = use_task_button(viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason)
+    btn_props = use_task_button(
+        viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason
+    )
 
-    year_items = [{"text": str(y), "value": y} for y in sorted(ALOS_YEARS, reverse=True)]
+    year_items = [
+        {"text": str(y), "value": y} for y in sorted(ALOS_YEARS, reverse=True)
+    ]
     filter_items = [{"text": f["text"], "value": f["value"]} for f in SPECKLE_FILTERS]
 
     # Build radio items, disabling FNF if the current year is > 2017
@@ -152,7 +160,9 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
     viz_items = []
     for item in VIZ_LAYERS:
         disabled = item["value"] == VIZ_FNF and not fnf_ok
-        viz_items.append({"label": item["label"], "value": item["value"], "disabled": disabled})
+        viz_items.append(
+            {"label": item["label"], "value": item["value"], "disabled": disabled}
+        )
 
     with solara.Column():
         rv.Select(
@@ -201,7 +211,9 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
                 type="warning",
                 dense=True,
                 text=True,
-                children=[f"FNF not available for {state.year.value}. Pick RGB or RFDI."],
+                children=[
+                    f"FNF not available for {state.year.value}. Pick RGB or RFDI."
+                ],
             )
 
         TaskButtonComponent(

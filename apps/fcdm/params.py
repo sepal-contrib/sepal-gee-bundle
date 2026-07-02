@@ -54,7 +54,8 @@ def _landsat_entry(short: str) -> dict:
 
 
 SENSORS: dict = {
-    f"landsat {p.short[1:]}": _landsat_entry(p.short) for p in LANDSAT_PLATFORMS.values()
+    f"landsat {p.short[1:]}": _landsat_entry(p.short)
+    for p in LANDSAT_PLATFORMS.values()
 }
 SENSORS["sentinel 2"] = {
     "start": 2015,
@@ -148,7 +149,6 @@ def delta_rnbr_legend():
             items=[DiscreteEntry(label="Forest mask", color="#006600")],
         )
     )
-
 
 # Layer name constants (used by components to manage map state)
 LAYER_AOI = "AOI"

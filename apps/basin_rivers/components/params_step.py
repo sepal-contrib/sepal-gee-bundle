@@ -13,7 +13,8 @@ def ParamsStep(state):
     """HydroSHEDS level, year range, and tree cover threshold inputs."""
     level_items = [{"text": f"Level {lv}", "value": lv} for lv in HYBAS_LEVELS]
     year_items = [
-        {"text": str(2000 + i), "value": 2000 + i} for i in range(GFC_MIN_YEAR, GFC_MAX_YEAR + 1)
+        {"text": str(2000 + i), "value": 2000 + i}
+        for i in range(GFC_MIN_YEAR, GFC_MAX_YEAR + 1)
     ]
 
     current = state.treecover.value
