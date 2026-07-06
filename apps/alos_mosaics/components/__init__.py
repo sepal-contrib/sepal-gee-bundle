@@ -1,5 +1,5 @@
 from .aoi_step import AoiStep
 from .export_step import ExportStep
-from .viz_step import VizStep
+from .visualize_step import VisualizeStep
 
-__all__ = ["AoiStep", "ExportStep", "VizStep"]
+__all__ = ["AoiStep", "ExportStep", "VisualizeStep"]

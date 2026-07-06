@@ -15,7 +15,7 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
-from apps._widgets import AboutOnceDialog, MarkdownNewTab
+from apps._widgets import AboutOnceDialog, MarkdownNewTab, add_satellite_basemap
 
 from .components import AoiStep, ForestStep, ParamsStep, RunStep
 from .model import FcdmState
@@ -68,12 +68,15 @@ def FcdmPage():
     state = solara.use_memo(lambda: FcdmState(), [])
     legend_data = solara.use_reactive(delta_rnbr_legend())
     legend_visible = solara.use_reactive(False)
+    legend_collapsed = solara.use_reactive(False)
     sepal_map = solara.use_memo(
-        lambda: SepalMap(
-            gee_interface=gee_interface,
-            fullscreen=True,
-            theme_state=theme_state,
-            min_zoom=3,
+        lambda: add_satellite_basemap(
+            SepalMap(
+                gee_interface=gee_interface,
+                fullscreen=True,
+                theme_state=theme_state,
+                min_zoom=3,
+            )
         ),
         [id(gee_interface)],
     )
@@ -136,6 +139,8 @@ def FcdmPage():
     LegendComponent(
         legend_data=legend_data.value,
         visible=legend_visible.value,
+        collapsed=legend_collapsed.value,
+        event_set_collapsed=legend_collapsed.set,
     )
 
     AboutOnceDialog(

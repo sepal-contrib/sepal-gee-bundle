@@ -42,7 +42,7 @@ ALOS_LAYER_KEY = "alos_mosaic"
 
 
 @dataclass(frozen=True, slots=True)
-class VizRequest:
+class VisualizeRequest:
     aoi_fc: object  # ee.FeatureCollection
     year: int
     speckle_filter: str
@@ -52,12 +52,12 @@ class VizRequest:
 
 
 @solara.component
-def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=None):
+def VisualizeStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=None):
     notifications = use_notifications()
     cancel_reason = solara.use_ref(None)
 
     @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
-    async def viz_task(request: VizRequest):
+    async def viz_task(request: VisualizeRequest):
         with notifications.track("Rendering ALOS layer", total_steps=3) as task:
             task.step("Building ALOS mosaic")
             image = build_alos_mosaic(
@@ -136,7 +136,7 @@ def VizStep(state, sepal_map, gee_interface, legend_data=None, legend_visible=No
         if legend_visible is not None:
             legend_visible.set(False)
         viz_task(
-            VizRequest(
+            VisualizeRequest(
                 aoi_fc=state.aoi.value.feature_collection,
                 year=int(state.year.value),
                 speckle_filter=state.speckle_filter.value,

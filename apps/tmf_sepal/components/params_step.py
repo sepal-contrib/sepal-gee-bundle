@@ -13,6 +13,7 @@ from apps.tmf_sepal.params import (
     TMF_MIN_YEAR,
     TMF_TYPES,
     change_legend,
+    transition_main_legend,
     year_legend,
 )
 from apps.tmf_sepal.scripts import build_tmf_image, viz_params_for
@@ -77,13 +78,16 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
         if viz_task.finished and viz_task.value is not None:
             state.result_image.value = viz_task.value
             if legend_data is not None:
-                if state.tmf_type.value == "CHG":
+                tmf = state.tmf_type.value
+                if tmf == "CHG":
                     legend_data.set(asdict(change_legend()))
+                elif tmf == "TRANS":
+                    legend_data.set(asdict(transition_main_legend()))
                 else:
                     legend_data.set(
                         asdict(
                             year_legend(
-                                state.tmf_type.value,
+                                tmf,
                                 state.year_start.value,
                                 state.year_end.value,
                             )
@@ -102,12 +106,13 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
         if state.aoi.value is None:
             notifications.warning("Please select an Area of Interest first.")
             return
-        if state.year_start.value > state.year_end.value:
+        if state.tmf_type.value != "TRANS" and state.year_start.value > state.year_end.value:
             notifications.warning("Start year must be lower than or equal to end year.")
             return
         cancel_reason.current = None
         state.loading.value = True
         state.result_image.value = None
+        state.stats_rows.set([])
         if legend_visible is not None:
             legend_visible.set(False)
         viz_task(
@@ -119,13 +124,9 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             )
         )
 
-    btn_props = use_task_button(
-        viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason
-    )
+    btn_props = use_task_button(viz_task, on_start=_start_viz, cancel_reason_ref=cancel_reason)
 
-    year_items = [
-        {"text": str(y), "value": y} for y in range(TMF_MIN_YEAR, TMF_MAX_YEAR + 1)
-    ]
+    year_items = [{"text": str(y), "value": y} for y in range(TMF_MIN_YEAR, TMF_MAX_YEAR + 1)]
     type_items = [{"text": t["label"], "value": t["value"]} for t in TMF_TYPES]
 
     with solara.Column():
@@ -137,22 +138,33 @@ def ParamsStep(state, sepal_map, gee_interface, legend_data=None, legend_visible
             class_="mt-2",
         )
 
-        rv.Select(
-            v_model=state.year_start.value,
-            on_v_model=lambda v: state.year_start.set(int(v)),
-            items=year_items,
-            label="Start year",
-        )
+        if state.tmf_type.value != "TRANS":
+            rv.Select(
+                v_model=state.year_start.value,
+                on_v_model=lambda v: state.year_start.set(int(v)),
+                items=year_items,
+                label="Start year",
+            )
 
-        rv.Select(
-            v_model=state.year_end.value,
-            on_v_model=lambda v: state.year_end.set(int(v)),
-            items=year_items,
-            label="End year",
-        )
+            rv.Select(
+                v_model=state.year_end.value,
+                on_v_model=lambda v: state.year_end.set(int(v)),
+                items=year_items,
+                label="End year",
+            )
+        else:
+            rv.Html(
+                tag="div",
+                class_="text-caption mt-2",
+                style_="opacity: 0.7;",
+                children=[
+                    f"Whole-period map ({TMF_MIN_YEAR}-{TMF_MAX_YEAR}); "
+                    "the year range does not apply."
+                ],
+            )
 
         TaskButtonComponent(
-            label="Add layer",
+            label="Process & add layer",
             **btn_props,
             external_busy=state.aoi.value is None,
             small=True,

@@ -15,7 +15,7 @@ from pysepal.solara import (
 from pysepal.solara.components.legend import LegendComponent
 from pysepal.solara.notifications import NotificationProvider
 
-from apps._widgets import AboutOnceDialog, MarkdownNewTab
+from apps._widgets import AboutOnceDialog, MarkdownNewTab, add_satellite_basemap
 
 from .components import AoiStep, ExportStep, ParamsStep, StatsStep
 from .model import TmfSepalState
@@ -34,9 +34,11 @@ interest and year range.
 ### Workflow
 
 1. Select an **Area of Interest**.
-2. Pick a **TMF layer** (Degradation year, Deforestation year, or Annual
-   change) and a **year range** in 1990-{TMF_VERSION_YEAR}.
-3. Click **Add layer** to render the TMF image on the map.
+2. Pick a **TMF layer**: *Degradation year*, *Deforestation year*, *Change
+   between two years*, or the full-record *Transition map*. The year-based
+   layers take a **year range** in 1990-{TMF_VERSION_YEAR}; the Transition map
+   is whole-period.
+3. Click **Process & add layer** to render the TMF image on the map.
 4. Use the **Export** step to send the image to a GEE asset, Google Drive, or
    SEPAL.
 
@@ -45,6 +47,7 @@ interest and year range.
 - JRC/TMF/v1_{TMF_VERSION_YEAR}/DegradationYear
 - JRC/TMF/v1_{TMF_VERSION_YEAR}/DeforestationYear
 - JRC/TMF/v1_{TMF_VERSION_YEAR}/AnnualChanges
+- JRC/TMF/v1_{TMF_VERSION_YEAR}/TransitionMap_Subtypes
 
 ### References
 
@@ -73,17 +76,20 @@ def TmfSepalPage():
 
     state = solara.use_memo(lambda: TmfSepalState(), [])
     sepal_map = solara.use_memo(
-        lambda: SepalMap(
-            gee_interface=gee_interface,
-            fullscreen=True,
-            theme_state=theme_state,
-            min_zoom=3,
+        lambda: add_satellite_basemap(
+            SepalMap(
+                gee_interface=gee_interface,
+                fullscreen=True,
+                theme_state=theme_state,
+                min_zoom=3,
+            )
         ),
         [id(gee_interface)],
     )
 
     legend_data = solara.use_reactive({})
     legend_visible = solara.use_reactive(False)
+    legend_collapsed = solara.use_reactive(False)
 
     steps_data = [
         {
@@ -112,9 +118,7 @@ def TmfSepalPage():
         {
             "title": "Parameters",
             "icon": "mdi-tune",
-            "content": [
-                ParamsStep(state, sepal_map, gee_interface, legend_data, legend_visible)
-            ],
+            "content": [ParamsStep(state, sepal_map, gee_interface, legend_data, legend_visible)],
         },
         {
             "title": "Statistics",
@@ -145,6 +149,8 @@ def TmfSepalPage():
     LegendComponent(
         legend_data=legend_data.value,
         visible=legend_visible.value,
+        collapsed=legend_collapsed.value,
+        event_set_collapsed=legend_collapsed.set,
     )
 
     AboutOnceDialog(

@@ -1,7 +1,7 @@
 """Area statistics step for the TMF app.
 
 Computes class-wise / year-wise area (ha) for the visualized TMF image and
-renders a pie chart + data table.
+renders a compact data table. The charts live in the dashboard modal.
 """
 
 from __future__ import annotations
@@ -11,9 +11,6 @@ from dataclasses import dataclass
 
 import reacton.ipyvuetify as rv
 import solara
-from ipecharts import EChartsWidget
-from ipecharts.option import Legend, Option, Title, Tooltip
-from ipecharts.option.series import Pie
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
 
@@ -35,7 +32,7 @@ class StatsRequest:
 
 @solara.component
 def StatsStep(state, gee_interface, legend_visible=None, sepal_map=None):
-    """Compute area statistics + render pie chart and data table."""
+    """Compute area statistics + render a data table (charts live in the dashboard)."""
     notifications = use_notifications()
     cancel_ref = solara.use_ref(None)
     stats_rows = state.stats_rows.value
@@ -99,42 +96,9 @@ def StatsStep(state, gee_interface, legend_visible=None, sepal_map=None):
         )
 
         if stats_rows:
-            _StatsPie(stats_rows, state.tmf_type.value)
             _StatsTable(stats_rows, state.tmf_type.value)
 
         DashboardStep(state, legend_visible=legend_visible, sepal_map=sepal_map)
-
-
-@solara.component
-def _StatsPie(rows: list, tmf_type: str):
-    """Pie chart of area per class/year."""
-    if not rows:
-        return
-
-    data = []
-    colors: list[str] = []
-    for r in rows:
-        item: dict = {"name": r["label"], "value": round(r["area_ha"], 2)}
-        if r.get("color"):
-            item["itemStyle"] = {"color": r["color"]}
-            colors.append(r["color"])
-        data.append(item)
-
-    title = "Area by class" if tmf_type == "CHG" else "Area by year"
-    series = Pie(
-        name="Area (ha)",
-        radius=["35%", "65%"],
-        data=data,
-        label={"show": True, "formatter": "{b}: {d}%"},
-    )
-
-    option = Option(
-        title=Title(text=title, left="center"),
-        tooltip=Tooltip(trigger="item", formatter="{b}: {c} ha ({d}%)"),
-        legend=Legend(orient="vertical", left="left", top="middle"),
-        series=[series],
-    )
-    EChartsWidget.element(option=option, style={"height": "280px"})
 
 
 @solara.component
