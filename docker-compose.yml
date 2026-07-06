@@ -23,9 +23,11 @@ services:
       - ALL
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8768"]
-      timeout: 60s
-      interval: 1s
-      retries: 60
+      start_period: 60s
+      start_interval: 1s
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - sepal
     restart: always
