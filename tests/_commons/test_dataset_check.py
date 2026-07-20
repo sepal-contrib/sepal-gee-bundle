@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import sys
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
@@ -309,3 +311,102 @@ def test_check_registry_all_ok_when_pinned_matches_live():
     results = dc.check_registry(ee, today=_today())
     non_ok = [r for r in results if r.status != dc.STATUS_OK]
     assert non_ok == [], non_ok
+
+
+# ---------------------------------------------------------------------------
+# Earth Engine initialization
+# ---------------------------------------------------------------------------
+
+SERVICE_ACCOUNT_TOKEN = json.dumps(
+    {
+        "type": "service_account",
+        "project_id": "ee-bundle-ci",
+        "client_email": "bot@ee-bundle-ci.iam.gserviceaccount.com",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----\n",
+    }
+)
+
+OAUTH_TOKEN = json.dumps(
+    {
+        "refresh_token": "1//fake-refresh-token",
+        "project": "ee-someuser",
+        "scopes": ["https://www.googleapis.com/auth/earthengine"],
+    }
+)
+
+
+def _fake_ee_module() -> MagicMock:
+    mock = MagicMock()
+    mock.data.is_initialized.return_value = False
+    return mock
+
+
+@pytest.fixture
+def ee_credentials_path(tmp_path, monkeypatch):
+    """Point ``Path.home()`` at a scratch dir; yield the path EE reads."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("EARTHENGINE_TOKEN", raising=False)
+    return tmp_path / ".config" / "earthengine" / "credentials"
+
+
+def test_initialize_ee_writes_token_to_the_path_ee_reads(ee_credentials_path, monkeypatch):
+    monkeypatch.setenv("EARTHENGINE_TOKEN", OAUTH_TOKEN)
+    monkeypatch.setitem(sys.modules, "ee", _fake_ee_module())
+
+    dc._initialize_ee()
+
+    assert ee_credentials_path.exists()
+    assert json.loads(ee_credentials_path.read_text())["project"] == "ee-someuser"
+
+
+def test_initialize_ee_uses_service_account_credentials(ee_credentials_path, monkeypatch):
+    monkeypatch.setenv("EARTHENGINE_TOKEN", SERVICE_ACCOUNT_TOKEN)
+    fake = _fake_ee_module()
+    monkeypatch.setitem(sys.modules, "ee", fake)
+
+    dc._initialize_ee()
+
+    fake.ServiceAccountCredentials.assert_called_once_with(
+        "bot@ee-bundle-ci.iam.gserviceaccount.com", str(ee_credentials_path)
+    )
+    _, kwargs = fake.Initialize.call_args
+    assert kwargs["project"] == "ee-bundle-ci"
+    assert kwargs["credentials"] is fake.ServiceAccountCredentials.return_value
+
+
+def test_initialize_ee_uses_stored_oauth_credentials(ee_credentials_path, monkeypatch):
+    monkeypatch.setenv("EARTHENGINE_TOKEN", OAUTH_TOKEN)
+    fake = _fake_ee_module()
+    monkeypatch.setitem(sys.modules, "ee", fake)
+
+    dc._initialize_ee()
+
+    fake.ServiceAccountCredentials.assert_not_called()
+    fake.Initialize.assert_called_once_with(project="ee-someuser")
+
+
+def test_initialize_ee_keeps_an_existing_credentials_file(ee_credentials_path, monkeypatch):
+    ee_credentials_path.parent.mkdir(parents=True)
+    ee_credentials_path.write_text(OAUTH_TOKEN)
+    monkeypatch.setenv("EARTHENGINE_TOKEN", SERVICE_ACCOUNT_TOKEN)
+    fake = _fake_ee_module()
+    monkeypatch.setitem(sys.modules, "ee", fake)
+
+    dc._initialize_ee()
+
+    fake.Initialize.assert_called_once_with(project="ee-someuser")
+
+
+def test_initialize_ee_raises_when_credentials_carry_no_project(ee_credentials_path, monkeypatch):
+    monkeypatch.setenv("EARTHENGINE_TOKEN", json.dumps({"refresh_token": "1//fake"}))
+    monkeypatch.setitem(sys.modules, "ee", _fake_ee_module())
+
+    with pytest.raises(ValueError, match="project"):
+        dc._initialize_ee()
+
+
+def test_initialize_ee_raises_when_no_token_and_no_file(ee_credentials_path, monkeypatch):
+    monkeypatch.setitem(sys.modules, "ee", _fake_ee_module())
+
+    with pytest.raises(FileNotFoundError, match="EARTHENGINE_TOKEN"):
+        dc._initialize_ee()
