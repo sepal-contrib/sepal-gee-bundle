@@ -28,9 +28,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from apps._commons.datasets import (
@@ -259,11 +261,48 @@ def overall_exit_code(results: list[CheckResult]) -> int:
     return 0
 
 
+def _ee_credentials_path() -> Path:
+    """The only path ``ee.Initialize()`` reads (see ``ee/oauth.py``)."""
+    return Path.home() / ".config" / "earthengine" / "credentials"
+
+
 def _initialize_ee() -> Any:
-    """Initialize the Earth Engine SDK; raise on failure."""
+    """Initialize the Earth Engine SDK; raise on failure.
+
+    ``EARTHENGINE_TOKEN`` holds the contents of an Earth Engine credentials
+    file — either a stored OAuth grant or a service-account key.  Only the
+    latter needs ``ServiceAccountCredentials``; a plain ``ee.Initialize()``
+    cannot use it, since it looks for a ``refresh_token`` that a key has not
+    got.  Mirrors ``pysepal.scripts.gee.init_ee`` without importing pysepal,
+    which would pull the whole widget stack into this CLI.
+    """
     import ee  # local import — avoids hard dependency at module load
 
-    ee.Initialize()
+    if ee.data.is_initialized():
+        return ee
+
+    path = _ee_credentials_path()
+    token = os.environ.get("EARTHENGINE_TOKEN")
+    if token and not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(token)
+    if not path.exists():
+        raise FileNotFoundError(f"no credentials at {path} and EARTHENGINE_TOKEN is unset")
+
+    credentials = json.loads(path.read_text())
+    project = credentials.get("project_id") or credentials.get("project")
+    if not project:
+        raise ValueError(f"no project id in {path}; set it with `earthengine set_project`")
+
+    if credentials.get("type") == "service_account":
+        logger.info("initializing Earth Engine with a service account")
+        ee.Initialize(
+            credentials=ee.ServiceAccountCredentials(credentials.get("client_email"), str(path)),
+            project=project,
+        )
+    else:
+        logger.info("initializing Earth Engine with stored OAuth credentials")
+        ee.Initialize(project=project)
     return ee
 
 

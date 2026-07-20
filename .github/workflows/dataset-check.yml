@@ -12,6 +12,8 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      EARTHENGINE_TOKEN: ${{ secrets.EARTHENGINE_TOKEN }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -24,19 +26,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Authenticate Earth Engine
-        env:
-          EARTHENGINE_TOKEN: ${{ secrets.EARTHENGINE_TOKEN }}
+      - name: Verify Earth Engine auth
         run: |
           if [ -z "$EARTHENGINE_TOKEN" ]; then
             echo "::error::EARTHENGINE_TOKEN secret is not set"
             exit 1
           fi
-          # ee.Initialize() reads this exact path; the filename has no extension.
-          # See earthengine-api ee/oauth.py::get_credentials_path.
-          mkdir -p "$HOME/.config/earthengine"
-          printf '%s' "$EARTHENGINE_TOKEN" > "$HOME/.config/earthengine/credentials"
-          python -c "import ee; ee.Initialize(); assert ee.Number(1).add(1).getInfo() == 2; print('Earth Engine ready')"
+          python - <<'PY'
+          import logging
+          logging.basicConfig(level=logging.INFO, format="%(message)s")
+          from apps._commons.dataset_check import _initialize_ee
+
+          ee = _initialize_ee()
+          assert ee.Number(1).add(1).getInfo() == 2
+          print("Earth Engine ready")
+          PY
 
       - name: Run dataset check
         id: check
