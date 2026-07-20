@@ -32,13 +32,14 @@ jobs:
             echo "::error::EARTHENGINE_TOKEN secret is not set"
             exit 1
           fi
+          # ee.Initialize() reads this exact path; the filename has no extension.
+          # See earthengine-api ee/oauth.py::get_credentials_path.
           mkdir -p "$HOME/.config/earthengine"
-          printf '%s' "$EARTHENGINE_TOKEN" > "$HOME/.config/earthengine/service-account.json"
+          printf '%s' "$EARTHENGINE_TOKEN" > "$HOME/.config/earthengine/credentials"
+          python -c "import ee; ee.Initialize(); assert ee.Number(1).add(1).getInfo() == 2; print('Earth Engine ready')"
 
       - name: Run dataset check
         id: check
-        env:
-          EE_SERVICE_ACCOUNT_FILE: ${{ runner.workspace }}/../home/runner/.config/earthengine/service-account.json
         run: |
           set +e
           python -m apps._commons.dataset_check > report.md
