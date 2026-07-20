@@ -8,8 +8,9 @@ from pysepal.solara.components.aoi.aoi_view import AoiView
 def AoiStep(state, sepal_map):
     """Area of Interest selection using pysepal AoiView.
 
-    Shape and point draw methods are disabled because JRC TMF mosaics are only
-    meaningful when clipped by an actual region.
+    SHAPE and POINTS (local file uploads) are disabled because JRC TMF
+    mosaics are only meaningful when clipped by a real region. Drawn shapes
+    and GEE-backed methods (admin boundaries, assets) remain available.
     """
     AoiView(
         value=state.aoi,
