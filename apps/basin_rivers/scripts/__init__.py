@@ -1,6 +1,7 @@
 from .gfc_classification import classify_gfc
 from .statistics import (
     add_catchment_colors,
+    basin_color_map,
     compute_zonal_stats,
     get_catchment_bar_df,
     get_catchment_pie_df,
@@ -13,6 +14,7 @@ from .watershed import build_upstream_fc, get_hydroshed_collection, get_upstream
 
 __all__ = [
     "add_catchment_colors",
+    "basin_color_map",
     "build_upstream_fc",
     "classify_gfc",
     "compute_zonal_stats",
