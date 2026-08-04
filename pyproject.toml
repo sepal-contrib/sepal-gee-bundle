@@ -17,6 +17,7 @@ dependencies = [
     # 0.x: a minor is a breaking release, so cap it.
     "pysepal-api>=0.3.0,<0.4",
     "ipecharts",
+    "vectortileserver>=0.2.1",
     "reportlab>=4,<5",
 ]
 

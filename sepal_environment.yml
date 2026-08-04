@@ -8,5 +8,6 @@ dependencies:
   - rasterio
   - gdal
   - pyproj
+  - tippecanoe
   - pip:
       - -e .
