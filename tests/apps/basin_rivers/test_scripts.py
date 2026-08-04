@@ -14,7 +14,7 @@ from apps.basin_rivers.params import (
     HYBAS_LEVELS,
 )
 from apps.basin_rivers.scripts.statistics import parse_zonal_stats
-from apps.basin_rivers.scripts.visualization import create_basins_layer, create_selection_layer
+from apps.basin_rivers.scripts.visualization import create_selection_layer
 
 
 class TestParams:
@@ -129,21 +129,10 @@ class TestParseZonalStats:
 
 
 class TestVisualization:
-    def test_create_basins_layer(self):
-        geojson = {"type": "FeatureCollection", "features": []}
-        layer = create_basins_layer(geojson)
-        assert layer.name == "Upstream catchment"
-        assert layer.data == geojson
-
     def test_create_selection_layer(self):
         geojson = {"type": "FeatureCollection", "features": []}
         layer = create_selection_layer(geojson)
         assert layer.name == "Selected"
-
-    def test_custom_layer_name(self):
-        geojson = {"type": "FeatureCollection", "features": []}
-        layer = create_basins_layer(geojson, name="My Basins")
-        assert layer.name == "My Basins"
 
 
 class TestDashboardParams:
@@ -167,6 +156,7 @@ class TestDashboardParams:
         for key in ["all", "forest", "loss", "gain", "non_forest", "gain_loss"]:
             assert key in CATCH_PIE_TITLES
             assert key in CATCH_BAR_TITLES
+
 
 class TestBasinColorMap:
     def test_is_deterministic_regardless_of_input_order(self):
@@ -221,6 +211,7 @@ class TestBasinColorMap:
         assert colored["catch_color"].iloc[0] == mapping["7.0"]
         assert colored["catch_color"].iloc[1] == mapping["8.0"]
         assert pd.isna(colored["catch_color"].iloc[2])
+
 
 class TestBasinTileStyle:
     META: ClassVar[dict] = {"vector_layers": [{"id": "basins", "minzoom": 0, "maxzoom": 14}]}

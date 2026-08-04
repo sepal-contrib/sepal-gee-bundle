@@ -28,7 +28,7 @@ from apps.basin_rivers.scripts import (
     classify_gfc,
     get_upstream_basin_ids,
 )
-from apps.basin_rivers.scripts.visualization import create_basins_layer
+from apps.basin_rivers.scripts.tiles import build_basins_layer
 
 from .dashboard_step import DashboardStep
 
@@ -59,7 +59,7 @@ def DelineationStep(
 
     @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
     async def trace_task(request: TraceRequest):
-        with notifications.track("Tracing upstream watershed", total_steps=4) as task:
+        with notifications.track("Tracing upstream watershed", total_steps=5) as task:
             task.step("Validating pour point...")
             geometry = ee.Geometry.Point([request.lon, request.lat])
 
@@ -67,7 +67,9 @@ def DelineationStep(
             upstream_fc, hybas_ids = await get_upstream_basin_ids(
                 gee_interface, request.level, geometry
             )
-            geojson_data = await gee_interface.get_info_async(upstream_fc)
+
+            task.step("Building basin tiles...")
+            basins_layer = await build_basins_layer(gee_interface, upstream_fc, hybas_ids)
 
             task.step("Classifying GFC forest change...")
             gfc_image = classify_gfc(
@@ -85,7 +87,7 @@ def DelineationStep(
             "upstream_fc": upstream_fc,
             "hybas_ids": hybas_ids,
             "gfc_image": gfc_image,
-            "geojson_data": geojson_data,
+            "basins_layer": basins_layer,
         }
 
     def _sync_trace():
@@ -108,14 +110,15 @@ def DelineationStep(
             existing = sepal_map.find_layer("Upstream catchment", none_ok=True)
             if existing:
                 sepal_map.remove_layer(existing)
-            basins_layer = create_basins_layer(result["geojson_data"])
-            sepal_map.add_layer(basins_layer, key="Upstream catchment")
 
-            from geopandas import GeoDataFrame
-
-            gdf = GeoDataFrame.from_features(result["geojson_data"]["features"])
-            if not gdf.empty:
-                sepal_map.zoom_bounds(gdf.total_bounds)
+            basins_layer = result["basins_layer"]
+            if basins_layer is None:
+                notifications.warning("No basin geometry returned; map layer skipped.")
+            else:
+                sepal_map.add_layer(basins_layer, key="Upstream catchment")
+                if basins_layer.bounds:
+                    (south, west), (north, east) = basins_layer.bounds
+                    sepal_map.zoom_bounds((west, south, east, north))
 
             if legend_data is not None:
                 legend_data.set(_asdict(GFC_LEGEND))

@@ -40,6 +40,7 @@ def BasinRiversPage():
         lambda: add_satellite_basemap(
             SepalMap(
                 gee_interface=gee_interface,
+                vinspector=True,
                 fullscreen=True,
                 theme_state=theme_state,
                 min_zoom=3,

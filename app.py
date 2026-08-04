@@ -6,6 +6,7 @@ from pysepal.solara import setup_sessions, setup_solara_server
 
 from apps.alos_mosaics.page import AlosMosaicsPage
 from apps.basin_rivers.page import BasinRiversPage
+from apps.basin_rivers.scripts.tiles import cleanup_tile_dir
 from apps.coverage_analysis.page import CoverageAnalysisPage
 from apps.fcdm.page import FcdmPage
 from apps.gee_source.page import GeeSourcePage
@@ -23,6 +24,12 @@ setup_solara_server()
 @solara.lab.on_kernel_start
 def on_kernel_start():
     return setup_sessions()
+
+
+@solara.lab.on_kernel_start
+def cleanup_basin_tiles():
+    kernel_id = solara.get_kernel_id()
+    return lambda: cleanup_tile_dir(kernel_id)
 
 
 @solara.component
