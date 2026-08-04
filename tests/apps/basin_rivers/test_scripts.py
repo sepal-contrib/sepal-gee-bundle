@@ -257,9 +257,11 @@ class TestBasinTileStyle:
             assert expr[expr.index(basin_id) + 1] == mapping[str(basin_id)]
 
     def test_handles_an_empty_id_list(self):
+        from apps.basin_rivers.scripts.visualization import BASIN_FALLBACK_COLOR
+
         expr = self._color_expr([])
 
-        assert expr == ["match", ["get", "HYBAS_ID"], "#CCCCCC"]
+        assert expr == BASIN_FALLBACK_COLOR
 
     def test_matches_with_float_hybas_ids(self):
         # HYBAS_ID can arrive as a JSON double from Earth Engine. Both the match
@@ -286,3 +288,35 @@ class TestBasinTileStyle:
         assert len(expr) == 2 * len(ids) + 3
         for basin_id in ids:
             assert basin_id in expr
+
+    def test_line_layer_shares_the_fill_color_expression(self):
+        from apps.basin_rivers.scripts.visualization import basin_tile_style
+
+        style = basin_tile_style([1234501, 1234502])(self.META, self.URL)
+        fill = next(layer for layer in style["layers"] if layer["type"] == "fill")
+        line = next(layer for layer in style["layers"] if layer["type"] == "line")
+
+        assert line["paint"]["line-color"] is fill["paint"]["fill-color"]
+
+    def test_line_and_fill_paint_use_the_shared_constants(self):
+        from apps.basin_rivers.scripts.visualization import (
+            BASIN_FILL_OPACITY,
+            BASIN_LINE_OPACITY,
+            BASIN_LINE_WIDTH,
+            basin_tile_style,
+        )
+
+        style = basin_tile_style([1234501])(self.META, self.URL)
+        fill = next(layer for layer in style["layers"] if layer["type"] == "fill")
+        line = next(layer for layer in style["layers"] if layer["type"] == "line")
+
+        assert fill["paint"]["fill-opacity"] == BASIN_FILL_OPACITY
+        assert line["paint"]["line-width"] == BASIN_LINE_WIDTH
+        assert line["paint"]["line-opacity"] == BASIN_LINE_OPACITY
+
+    def test_emits_no_circle_layer(self):
+        from apps.basin_rivers.scripts.visualization import basin_tile_style
+
+        style = basin_tile_style([1234501])(self.META, self.URL)
+
+        assert all(layer["type"] != "circle" for layer in style["layers"])
