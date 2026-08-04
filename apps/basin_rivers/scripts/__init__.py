@@ -9,12 +9,13 @@ from .statistics import (
     get_overall_pie_df,
     parse_zonal_stats,
 )
-from .visualization import create_basins_layer, create_selection_layer
+from .visualization import basin_tile_style, create_basins_layer, create_selection_layer
 from .watershed import build_upstream_fc, get_hydroshed_collection, get_upstream_basin_ids
 
 __all__ = [
     "add_catchment_colors",
     "basin_color_map",
+    "basin_tile_style",
     "build_upstream_fc",
     "classify_gfc",
     "compute_zonal_stats",

@@ -1,5 +1,6 @@
 """Tests for Basin Rivers scripts and params."""
 
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 from apps.basin_rivers.params import (
@@ -221,3 +222,76 @@ class TestBasinColorMap:
         assert colored["catch_color"].iloc[1] == mapping["8.0"]
         assert pd.isna(colored["catch_color"].iloc[2])
 
+class TestBasinTileStyle:
+    META: ClassVar[dict] = {"vector_layers": [{"id": "basins", "minzoom": 0, "maxzoom": 14}]}
+    URL = "/vectortiles/pmtiles?filePath=/tmp/basins.pmtiles"
+
+    def _color_expr(self, ids):
+        from apps.basin_rivers.scripts.visualization import basin_tile_style
+
+        style = basin_tile_style(ids)(self.META, self.URL)
+        fill = next(layer for layer in style["layers"] if layer["type"] == "fill")
+
+        return fill["paint"]["fill-color"]
+
+    def test_matches_on_numeric_hybas_id(self):
+        expr = self._color_expr([1234502, 1234501])
+
+        assert expr[0] == "match"
+        assert expr[1] == ["get", "HYBAS_ID"]
+        assert 1234501 in expr and "1234501" not in expr
+
+    def test_colors_agree_with_the_dashboard(self):
+        from apps.basin_rivers.scripts.statistics import basin_color_map
+
+        ids = [1234501, 1234502, 1234503]
+        expr = self._color_expr(ids)
+        mapping = basin_color_map(ids)
+
+        for basin_id in ids:
+            assert expr[expr.index(basin_id) + 1] == mapping[str(basin_id)]
+
+    def test_colors_agree_with_the_dashboard_across_digit_lengths(self):
+        # 9 and 100 sort differently as strings (basin_color_map's order) than
+        # as ints (the match expression's order), unlike same-digit-count ids
+        # above. This catches a positional zip of basin_color_map(...).values()
+        # against the numeric-sorted ids, which the all-7-digit case cannot.
+        from apps.basin_rivers.scripts.statistics import basin_color_map
+
+        ids = [9, 100]
+        expr = self._color_expr(ids)
+        mapping = basin_color_map(ids)
+
+        for basin_id in ids:
+            assert expr[expr.index(basin_id) + 1] == mapping[str(basin_id)]
+
+    def test_handles_an_empty_id_list(self):
+        expr = self._color_expr([])
+
+        assert expr == ["match", ["get", "HYBAS_ID"], "#CCCCCC"]
+
+    def test_matches_with_float_hybas_ids(self):
+        # HYBAS_ID can arrive as a JSON double from Earth Engine. Both the match
+        # values and the color lookup must normalize the same way, or str(float)
+        # vs str(int) keys mismatch and the lookup raises KeyError.
+        from apps.basin_rivers.scripts.statistics import basin_color_map
+
+        ids = [6120000010.0, 6120000020.0]
+        expr = self._color_expr(ids)
+        mapping = basin_color_map([int(b) for b in ids])
+
+        for basin_id in ids:
+            assert expr[expr.index(int(basin_id)) + 1] == mapping[str(int(basin_id))]
+
+    def test_matches_with_a_one_shot_iterator(self):
+        # hybas_ids must be consumed exactly once: consuming it twice leaves the
+        # second pass empty, which silently produces the all-grey fallback below
+        # instead of raising.
+        ids = [1234501, 1234502]
+        expr = self._color_expr(iter(ids))
+
+        assert expr[0] == "match"
+        assert expr != ["match", ["get", "HYBAS_ID"], "#CCCCCC"]
+        assert len(expr) == 2 * len(ids) + 3
+        for basin_id in ids:
+            assert basin_id in expr
