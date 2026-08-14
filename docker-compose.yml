@@ -7,13 +7,11 @@ services:
         HOST_GID: "${HOST_GID:-1000}"
     image: "sepal-gee-bundle"
     container_name: sepal-gee-bundle
-    volumes:
-      - "${EE_CREDENTIALS_PATH:-${HOME}/.config/earthengine/credentials}:/home/mambauser/.config/earthengine/credentials:ro"
     environment:
       SEPAL_HOST: "${SEPAL_HOST:-}"
       FORWARDED_ALLOW_IPS: "*"
       SOLARA_THEME_SHOW_BANNER: "False"
-      SOLARA_TEST: "${SOLARA_TEST:-false}"
+      PYSEPAL_DEV_AUTH: "${PYSEPAL_DEV_AUTH:-false}"
       LOCAL_SEPAL_USER: "${LOCAL_SEPAL_USER:-}"
       LOCAL_SEPAL_PASSWORD: "${LOCAL_SEPAL_PASSWORD:-}"
       MPLCONFIGDIR: "/tmp/matplotlib"
