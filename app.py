@@ -4,9 +4,9 @@ import solara
 from pysepal.logger import setup_logging
 from pysepal.solara import setup_sessions, setup_solara_server
 
+from apps._commons.tiles import cleanup_tile_dir
 from apps.alos_mosaics.page import AlosMosaicsPage
 from apps.basin_rivers.page import BasinRiversPage
-from apps.basin_rivers.scripts.tiles import cleanup_tile_dir
 from apps.coverage_analysis.page import CoverageAnalysisPage
 from apps.fcdm.page import FcdmPage
 from apps.gee_source.page import GeeSourcePage

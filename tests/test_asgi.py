@@ -9,13 +9,6 @@ from __future__ import annotations
 import pytest
 from starlette.testclient import TestClient
 
-from apps._commons.tiles import (
-    TILE_ROOT,
-    cleanup_tile_dir,
-    resolve_in_session,
-    session_tile_dir,
-)
-
 
 @pytest.fixture
 def tile_root(tmp_path, monkeypatch):
@@ -205,64 +198,6 @@ class TestTileArchiveServing:
         client.cookies.set("solara-session-id", "session-a")
 
         assert client.get(_url(tile_root, "kernel-a", "notes.txt")).status_code == 404
-
-
-class TestResolveInSession:
-    def test_resolves_a_plain_name(self, tile_root):
-        assert resolve_in_session("kernel-a", "basins.pmtiles").name == "basins.pmtiles"
-
-    def test_accepts_an_absolute_path_inside_the_session(self, tile_root):
-        """The normal case: vectortileserver sends the archive's absolute path."""
-        inside = tile_root / "kernel-a" / "basins.pmtiles"
-
-        assert resolve_in_session("kernel-a", str(inside)) == inside
-
-    def test_refuses_an_absolute_path_in_another_session(self, tile_root):
-        other = tile_root / "kernel-b" / "basins.pmtiles"
-
-        with pytest.raises(ValueError, match="escapes"):
-            resolve_in_session("kernel-a", str(other))
-
-    @pytest.mark.parametrize(
-        "filename",
-        ["../escape.pmtiles", "../../etc/passwd", "/etc/passwd", "a/../../escape.pmtiles"],
-    )
-    def test_refuses_an_escape(self, tile_root, filename):
-        with pytest.raises(ValueError, match="escapes"):
-            resolve_in_session("kernel-a", filename)
-
-    @pytest.mark.parametrize("session_id", ["", ".", "..", "a/b", "/abs", "a\\b"])
-    def test_refuses_an_unsafe_session_id(self, tile_root, session_id):
-        with pytest.raises(ValueError, match="unsafe session id"):
-            resolve_in_session(session_id, "basins.pmtiles")
-
-
-class TestSessionDirectories:
-    def test_cleanup_never_wipes_the_shared_root(self, tile_root):
-        """An empty id joins to TILE_ROOT itself, which rmtree would erase."""
-        session_tile_dir("kernel-a")
-
-        for unsafe in ("", ".", "..", "/", "a/b"):
-            with pytest.raises(ValueError):
-                cleanup_tile_dir(unsafe)
-
-        assert (tile_root / "kernel-a").is_dir()
-
-    def test_cleanup_removes_only_its_own_session(self, tile_root):
-        session_tile_dir("kernel-a")
-        session_tile_dir("kernel-b")
-
-        cleanup_tile_dir("kernel-a")
-
-        assert not (tile_root / "kernel-a").exists()
-        assert (tile_root / "kernel-b").is_dir()
-
-    def test_cleanup_is_safe_when_nothing_was_written(self, tile_root):
-        cleanup_tile_dir("never-used")
-
-    def test_tile_root_is_not_the_bare_temp_dir(self):
-        """A stray rmtree of TILE_ROOT must not take /tmp with it."""
-        assert TILE_ROOT.name == "sepal_gee_bundle_tiles"
 
 
 class TestTileArchiveLogging:

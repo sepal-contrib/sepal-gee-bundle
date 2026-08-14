@@ -129,85 +129,38 @@ async def test_raises_when_a_batch_failed(tmp_path, upstream_fc):
             await write_basins_geojson(gee, upstream_fc, [1], tmp_path / "b.geojson")
 
 
-def test_session_tile_dir_is_per_session_and_created(tmp_path, monkeypatch):
-    from apps.basin_rivers.scripts import tiles
+class TestBrowserTilePrefix:
+    """The prefix decides the URL the browser fetches the archive from."""
 
-    monkeypatch.setattr(tiles, "TILE_ROOT", tmp_path / "tiles")
+    def test_points_at_the_session_route(self, monkeypatch):
+        from solara.server import settings
 
-    first = tiles.session_tile_dir("session-a")
-    second = tiles.session_tile_dir("session-b")
+        from apps.basin_rivers.scripts.tiles import browser_tile_prefix
 
-    assert first.is_dir() and second.is_dir()
-    assert first != second
+        monkeypatch.setattr(settings.main, "root_path", None)
 
+        assert browser_tile_prefix("kernel-a") == "/tiles/kernel-a"
 
-def test_cleanup_removes_the_session_directory(tmp_path, monkeypatch):
-    from apps.basin_rivers.scripts import tiles
+    def test_carries_the_app_launcher_root_path(self, monkeypatch):
+        """A bare /tiles/... 404s behind the proxy, so root_path must lead."""
+        from solara.server import settings
 
-    monkeypatch.setattr(tiles, "TILE_ROOT", tmp_path / "tiles")
-    path = tiles.session_tile_dir("session-a")
-    (path / "x.pmtiles").write_text("data")
+        from apps.basin_rivers.scripts.tiles import browser_tile_prefix
 
-    tiles.cleanup_tile_dir("session-a")
+        monkeypatch.setattr(settings.main, "root_path", "/api/app-launcher/sepal-gee-bundle")
 
-    assert not path.exists()
+        prefix = browser_tile_prefix("kernel-a")
 
+        assert prefix == "/api/app-launcher/sepal-gee-bundle/tiles/kernel-a"
 
-def test_cleanup_is_safe_when_nothing_was_written(tmp_path, monkeypatch):
-    from apps.basin_rivers.scripts import tiles
+    def test_the_url_vectortileserver_builds_matches_the_route(self, monkeypatch):
+        """asgi.py routes /tiles/{kernel_id}/pmtiles; the client appends that."""
+        from solara.server import settings
 
-    monkeypatch.setattr(tiles, "TILE_ROOT", tmp_path / "tiles")
+        from apps.basin_rivers.scripts.tiles import browser_tile_prefix
 
-    tiles.cleanup_tile_dir("never-used")
+        monkeypatch.setattr(settings.main, "root_path", None)
 
+        url = f"{browser_tile_prefix('kernel-a')}/pmtiles?filePath=/tmp/x.pmtiles"
 
-def test_session_tile_dir_still_works_for_a_normal_id(tmp_path, monkeypatch):
-    from apps.basin_rivers.scripts import tiles
-
-    monkeypatch.setattr(tiles, "TILE_ROOT", tmp_path / "tiles")
-
-    path = tiles.session_tile_dir("session-a")
-
-    assert path == tmp_path / "tiles" / "session-a"
-    assert path.is_dir()
-
-
-# "" and "." both collapse to TILE_ROOT itself under Path.__truediv__, so both
-# are as dangerous as each other for cleanup_tile_dir; "/etc/passwd" (absolute)
-# and "../escape" (traversal) both leave TILE_ROOT entirely.
-UNSAFE_SESSION_IDS = ["", ".", "..", "/etc/passwd", "../escape"]
-
-
-@pytest.mark.parametrize("bad_id", UNSAFE_SESSION_IDS)
-def test_session_tile_dir_rejects_unsafe_ids(tmp_path, monkeypatch, bad_id):
-    from apps.basin_rivers.scripts import tiles
-
-    monkeypatch.setattr(tiles, "TILE_ROOT", tmp_path / "tiles")
-
-    with pytest.raises(ValueError):
-        tiles.session_tile_dir(bad_id)
-
-
-@pytest.mark.parametrize("bad_id", UNSAFE_SESSION_IDS)
-def test_cleanup_tile_dir_rejects_unsafe_ids(tmp_path, monkeypatch, bad_id):
-    from apps.basin_rivers.scripts import tiles
-
-    monkeypatch.setattr(tiles, "TILE_ROOT", tmp_path / "tiles")
-
-    with pytest.raises(ValueError):
-        tiles.cleanup_tile_dir(bad_id)
-
-
-@pytest.mark.parametrize("bad_id", ["", "."])
-def test_cleanup_with_root_collapsing_id_does_not_wipe_tile_root(tmp_path, monkeypatch, bad_id):
-    from apps.basin_rivers.scripts import tiles
-
-    monkeypatch.setattr(tiles, "TILE_ROOT", tmp_path / "tiles")
-    tiles.session_tile_dir("session-a")
-
-    with pytest.raises(ValueError):
-        tiles.cleanup_tile_dir(bad_id)
-
-    # The property that actually matters: other sessions survive a bad id.
-    assert tiles.TILE_ROOT.is_dir()
-    assert (tiles.TILE_ROOT / "session-a").is_dir()
+        assert url.startswith("/tiles/kernel-a/pmtiles?")

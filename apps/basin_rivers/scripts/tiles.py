@@ -6,77 +6,39 @@ transfer.
 """
 
 import json
-import shutil
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, Optional
 
 import ee
 import solara
+from solara.server import settings
 
+from apps._commons.tiles import session_tile_dir
 from apps.basin_rivers.params import BASIN_FETCH_BATCH_SIZE, BASIN_FETCH_WINDOW
 
 if TYPE_CHECKING:
     from vectortileserver import VectorTileLayer
 
-TILE_ROOT = Path(tempfile.gettempdir()) / "sepal_gee_bundle_tiles"
 
+def browser_tile_prefix(kernel_id: str) -> str:
+    """URL prefix the browser should use to reach this session's archives.
 
-def _session_dir(session_id: str) -> Path:
-    """Resolve a session id to its directory under TILE_ROOT.
-
-    This id ultimately reaches ``shutil.rmtree``, so anything that is not a
-    single plain path component is rejected before it is joined: an empty,
-    "." or ".." id collapses to ``TILE_ROOT`` itself under ``Path.__truediv__``
-    (making cleanup wipe every session), and an embedded separator can escape
-    it entirely (absolute id, or a "../" traversal).
+    Points at the route ``asgi.py`` serves rather than the kernel-local
+    loopback address, which no remote browser can resolve. The route is keyed
+    by kernel because it authorizes per session, and ``root_path`` carries the
+    app-launcher prefix -- a bare ``/tiles/...`` 404s behind the proxy. Solara
+    fills that setting in from the ASGI scope on the first page request, well
+    before any layer is built.
 
     Args:
-        session_id: the Solara kernel id.
+        kernel_id: the Solara kernel id.
 
     Returns:
-        the (not yet created) path under TILE_ROOT.
-
-    Raises:
-        ValueError: session_id is empty, ".", "..", or contains a path separator.
+        the prefix vectortileserver appends ``/pmtiles?filePath=...`` to.
     """
-    if not session_id or session_id in (".", "..") or "/" in session_id:
-        raise ValueError(f"unsafe session id: {session_id!r}")
+    root_path = settings.main.root_path or ""
 
-    return TILE_ROOT / session_id
-
-
-def session_tile_dir(session_id: str) -> Path:
-    """Directory holding one session's tile artifacts.
-
-    The tile endpoint serves anything inside its allowed directories, so this
-    root holds generated archives and nothing else.
-
-    Args:
-        session_id: the Solara kernel id.
-
-    Returns:
-        the created directory.
-
-    Raises:
-        ValueError: session_id is empty, ".", "..", or contains a path separator.
-    """
-    path = _session_dir(session_id)
-    path.mkdir(parents=True, exist_ok=True)
-
-    return path
-
-
-def cleanup_tile_dir(session_id: str) -> None:
-    """Remove a session's tile artifacts. Safe when nothing was written.
-
-    Args:
-        session_id: the Solara kernel id.
-
-    Raises:
-        ValueError: session_id is empty, ".", "..", or contains a path separator.
-    """
-    shutil.rmtree(_session_dir(session_id), ignore_errors=True)
+    return f"{root_path}/tiles/{kernel_id}"
 
 
 def _batches(items: list, size: int):
@@ -159,15 +121,16 @@ async def build_basins_layer(
 
     from apps.basin_rivers.scripts.visualization import basin_tile_style
 
-    tile_dir = session_tile_dir(solara.get_kernel_id())
+    kernel_id = solara.get_kernel_id()
+    tile_dir = session_tile_dir(kernel_id)
     dest = tile_dir / "upstream_basins.geojson"
 
     if not await write_basins_geojson(gee_interface, upstream_fc, hybas_ids, dest):
         return None
 
-    # No client_prefix on purpose: the URL must stay the kernel-local loopback URL
-    # so pysepal's TileBridge (mounted in page.py) can intercept it.
-    workspace = vts.TileWorkspace(allowed_directories=[tile_dir])
+    workspace = vts.TileWorkspace(
+        client_prefix=browser_tile_prefix(kernel_id), allowed_directories=[tile_dir]
+    )
     layer = await workspace.open_async(dest, style=basin_tile_style(hybas_ids))
     layer.name = name
 
