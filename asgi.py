@@ -58,27 +58,35 @@ def _authorize(request: Request, kernel_id: str) -> Response | None:
 async def tile_archive(request: Request) -> Response:
     """Serve one PMTiles archive out of its own session's directory.
 
+    Mirrors ``vectortileserver``'s own endpoint contract -- a literal
+    ``pmtiles`` segment plus a ``filePath`` query parameter -- because the
+    layer builds its URL as ``{client_prefix}/pmtiles?filePath=...`` and the
+    path it sends is absolute.
+
     ``FileResponse`` already parses ``Range`` and answers ``206``/``416``,
     which is the whole protocol PMTiles needs.
 
     Args:
-        request: carries ``kernel_id`` and ``filename`` path parameters.
+        request: carries the ``kernel_id`` path parameter and ``filePath``.
 
     Returns:
-        the archive, or 403/404 when the requester may not have it.
+        the archive, or 400/403/404 when the requester may not have it.
     """
     kernel_id = request.path_params["kernel_id"]
-    filename = request.path_params["filename"]
 
     refusal = _authorize(request, kernel_id)
     if refusal is not None:
         return refusal
 
-    if not filename.endswith(TILE_SUFFIX):
+    file_path = request.query_params.get("filePath")
+    if not file_path:
+        return Response(status_code=400)
+
+    if not file_path.endswith(TILE_SUFFIX):
         return Response(status_code=404)
 
     try:
-        path = resolve_in_session(kernel_id, filename)
+        path = resolve_in_session(kernel_id, file_path)
     except ValueError:
         return Response(status_code=404)
 
@@ -95,7 +103,7 @@ async def tile_archive(request: Request) -> Response:
 # the state worker are all lost.
 app = Starlette(
     routes=[
-        Route("/tiles/{kernel_id}/{filename}", endpoint=tile_archive),
+        Route("/tiles/{kernel_id}/pmtiles", endpoint=tile_archive),
         Mount("/", routes=solara_starlette.routes),
     ],
     lifespan=solara_starlette.lifespan,

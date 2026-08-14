@@ -61,13 +61,18 @@ def _archive(tile_root, kernel_id, name="basins.pmtiles", payload=b"PMTiles-byte
     return payload
 
 
+def _url(tile_root, kernel_id, name="basins.pmtiles"):
+    """The URL vectortileserver builds: literal segment, absolute filePath."""
+    return f"/tiles/{kernel_id}/pmtiles?filePath={tile_root / kernel_id / name}"
+
+
 class TestTileArchiveAuthorization:
     def test_serves_the_archive_to_its_own_session(self, client, tile_root):
         payload = _archive(tile_root, "kernel-a")
         _register("kernel-a", "session-a")
         client.cookies.set("solara-session-id", "session-a")
 
-        response = client.get("/tiles/kernel-a/basins.pmtiles")
+        response = client.get(_url(tile_root, "kernel-a"))
 
         assert response.status_code == 200
         assert response.content == payload
@@ -77,32 +82,68 @@ class TestTileArchiveAuthorization:
         _register("kernel-a", "session-a")
         client.cookies.set("solara-session-id", "session-b")
 
-        assert client.get("/tiles/kernel-a/basins.pmtiles").status_code == 403
+        assert client.get(_url(tile_root, "kernel-a")).status_code == 403
 
     def test_refuses_a_missing_cookie(self, client, tile_root):
         _archive(tile_root, "kernel-a")
         _register("kernel-a", "session-a")
 
-        assert client.get("/tiles/kernel-a/basins.pmtiles").status_code == 403
+        assert client.get(_url(tile_root, "kernel-a")).status_code == 403
 
     def test_unknown_kernel_is_not_found(self, client, tile_root):
         _archive(tile_root, "kernel-a")
         client.cookies.set("solara-session-id", "session-a")
 
-        assert client.get("/tiles/kernel-a/basins.pmtiles").status_code == 404
+        assert client.get(_url(tile_root, "kernel-a")).status_code == 404
+
+    def test_refuses_reading_another_kernels_archive(self, client, tile_root):
+        """FilePath is absolute and comes from the URL, so it is the attack.
+
+        A logged-in user asks on their own kernel's route for a path inside
+        someone else's directory -- the whole reason the route resolves and
+        checks containment instead of trusting the parameter.
+        """
+        _archive(tile_root, "kernel-victim", payload=b"someone-elses-data")
+        _archive(tile_root, "kernel-attacker")
+        _register("kernel-attacker", "session-attacker")
+        client.cookies.set("solara-session-id", "session-attacker")
+
+        victim = tile_root / "kernel-victim" / "basins.pmtiles"
+        response = client.get(f"/tiles/kernel-attacker/pmtiles?filePath={victim}")
+
+        assert response.status_code == 404
+        assert b"someone-elses-data" not in response.content
+
+    def test_refuses_a_traversal_out_of_the_session(self, client, tile_root):
+        _archive(tile_root, "kernel-victim", payload=b"someone-elses-data")
+        _archive(tile_root, "kernel-attacker")
+        _register("kernel-attacker", "session-attacker")
+        client.cookies.set("solara-session-id", "session-attacker")
+
+        escape = tile_root / "kernel-attacker" / ".." / "kernel-victim" / "basins.pmtiles"
+        response = client.get(f"/tiles/kernel-attacker/pmtiles?filePath={escape}")
+
+        assert response.status_code == 404
+
+    def test_missing_file_path_is_a_bad_request(self, client, tile_root):
+        _archive(tile_root, "kernel-a")
+        _register("kernel-a", "session-a")
+        client.cookies.set("solara-session-id", "session-a")
+
+        assert client.get("/tiles/kernel-a/pmtiles").status_code == 400
 
     def test_a_dead_kernel_stops_serving_its_files(self, client, tile_root):
         """Eviction removes the context; the files may outlive it briefly."""
         _archive(tile_root, "kernel-a")
         _register("kernel-a", "session-a")
         client.cookies.set("solara-session-id", "session-a")
-        assert client.get("/tiles/kernel-a/basins.pmtiles").status_code == 200
+        assert client.get(_url(tile_root, "kernel-a")).status_code == 200
 
         from solara.server import kernel_context
 
         del kernel_context.contexts["kernel-a"]
 
-        assert client.get("/tiles/kernel-a/basins.pmtiles").status_code == 404
+        assert client.get(_url(tile_root, "kernel-a")).status_code == 404
 
 
 class TestTileArchiveServing:
@@ -112,9 +153,7 @@ class TestTileArchiveServing:
         _register("kernel-a", "session-a")
         client.cookies.set("solara-session-id", "session-a")
 
-        response = client.get(
-            "/tiles/kernel-a/basins.pmtiles", headers={"Range": "bytes=2-5"}
-        )
+        response = client.get(_url(tile_root, "kernel-a"), headers={"Range": "bytes=2-5"})
 
         assert response.status_code == 206
         assert response.content == b"2345"
@@ -125,7 +164,7 @@ class TestTileArchiveServing:
         _register("kernel-a", "session-a")
         client.cookies.set("solara-session-id", "session-a")
 
-        response = client.get("/tiles/kernel-a/basins.pmtiles")
+        response = client.get(_url(tile_root, "kernel-a"))
 
         assert response.headers["accept-ranges"] == "bytes"
 
@@ -134,7 +173,7 @@ class TestTileArchiveServing:
         _register("kernel-a", "session-a")
         client.cookies.set("solara-session-id", "session-a")
 
-        assert client.get("/tiles/kernel-a/absent.pmtiles").status_code == 404
+        assert client.get(_url(tile_root, "kernel-a", "absent.pmtiles")).status_code == 404
 
     def test_refuses_a_non_archive_suffix(self, client, tile_root):
         """The directory is ours, but only archives are ever served from it."""
@@ -142,12 +181,24 @@ class TestTileArchiveServing:
         _register("kernel-a", "session-a")
         client.cookies.set("solara-session-id", "session-a")
 
-        assert client.get("/tiles/kernel-a/notes.txt").status_code == 404
+        assert client.get(_url(tile_root, "kernel-a", "notes.txt")).status_code == 404
 
 
 class TestResolveInSession:
     def test_resolves_a_plain_name(self, tile_root):
         assert resolve_in_session("kernel-a", "basins.pmtiles").name == "basins.pmtiles"
+
+    def test_accepts_an_absolute_path_inside_the_session(self, tile_root):
+        """The normal case: vectortileserver sends the archive's absolute path."""
+        inside = tile_root / "kernel-a" / "basins.pmtiles"
+
+        assert resolve_in_session("kernel-a", str(inside)) == inside
+
+    def test_refuses_an_absolute_path_in_another_session(self, tile_root):
+        other = tile_root / "kernel-b" / "basins.pmtiles"
+
+        with pytest.raises(ValueError, match="escapes"):
+            resolve_in_session("kernel-a", str(other))
 
     @pytest.mark.parametrize(
         "filename",
