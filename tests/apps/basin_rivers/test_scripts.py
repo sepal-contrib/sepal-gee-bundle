@@ -217,106 +217,127 @@ class TestBasinTileStyle:
     META: ClassVar[dict] = {"vector_layers": [{"id": "basins", "minzoom": 0, "maxzoom": 14}]}
     URL = "/vectortiles/pmtiles?filePath=/tmp/basins.pmtiles"
 
-    def _color_expr(self, ids):
+    def _layers(self, ids):
         from apps.basin_rivers.scripts.visualization import basin_tile_style
 
-        style = basin_tile_style(ids)(self.META, self.URL)
-        fill = next(layer for layer in style["layers"] if layer["type"] == "fill")
+        return basin_tile_style(ids)(self.META, self.URL)["layers"]
 
-        return fill["paint"]["fill-color"]
+    def _color_by_id(self, ids):
+        """Map each basin id to the color the emitted layers paint it.
 
-    def test_matches_on_numeric_hybas_id(self):
-        expr = self._color_expr([1234502, 1234501])
+        Reads the filters rather than a paint expression: protomaps-leaflet
+        evaluates filters but not data-driven paint, so the selection has to
+        live where the renderer will actually look.
+        """
+        found = {}
+        for layer in self._layers(ids):
+            if layer["type"] != "fill":
+                continue
+            selector = layer.get("filter")
+            assert selector is None or selector[:2] == ["in", "HYBAS_ID"]
+            for value in [] if selector is None else selector[2:]:
+                found[value] = layer["paint"]["fill-color"]
 
-        assert expr[0] == "match"
-        assert expr[1] == ["get", "HYBAS_ID"]
-        assert 1234501 in expr and "1234501" not in expr
+        return found
+
+    def test_selects_on_numeric_hybas_id(self):
+        """The tiles carry HYBAS_ID as a Number; "123" would never match."""
+        selected = self._color_by_id([1234502, 1234501])
+
+        assert set(selected) == {1234501, 1234502}
+        assert all(isinstance(value, int) for value in selected)
+
+    def test_uses_no_paint_expression(self):
+        """A ["match", ...] paint renders as one flat default color."""
+        for layer in self._layers([1234501, 1234502]):
+            for value in layer["paint"].values():
+                assert not isinstance(value, list), f"expression in paint: {value}"
 
     def test_colors_agree_with_the_dashboard(self):
         from apps.basin_rivers.scripts.statistics import basin_color_map
 
         ids = [1234501, 1234502, 1234503]
-        expr = self._color_expr(ids)
         mapping = basin_color_map(ids)
 
-        for basin_id in ids:
-            assert expr[expr.index(basin_id) + 1] == mapping[str(basin_id)]
+        assert self._color_by_id(ids) == {i: mapping[str(i)] for i in ids}
 
     def test_colors_agree_with_the_dashboard_across_digit_lengths(self):
         # 9 and 100 sort differently as strings (basin_color_map's order) than
-        # as ints (the match expression's order), unlike same-digit-count ids
-        # above. This catches a positional zip of basin_color_map(...).values()
-        # against the numeric-sorted ids, which the all-7-digit case cannot.
+        # as ints, unlike same-digit-count ids above. This catches a positional
+        # zip of basin_color_map(...).values() against numeric-sorted ids.
         from apps.basin_rivers.scripts.statistics import basin_color_map
 
         ids = [9, 100]
-        expr = self._color_expr(ids)
         mapping = basin_color_map(ids)
 
-        for basin_id in ids:
-            assert expr[expr.index(basin_id) + 1] == mapping[str(basin_id)]
+        assert self._color_by_id(ids) == {i: mapping[str(i)] for i in ids}
+
+    def test_groups_basins_sharing_a_color_into_one_layer(self):
+        """Layer count follows the palette, not the basin count."""
+        from apps.basin_rivers.scripts.statistics import basin_color_map
+
+        ids = list(range(1, 60))
+        distinct = len(set(basin_color_map(ids).values()))
+
+        assert len(self._layers(ids)) == 2 * distinct
+        assert self._color_by_id(ids) == {i: basin_color_map(ids)[str(i)] for i in ids}
 
     def test_handles_an_empty_id_list(self):
         from apps.basin_rivers.scripts.visualization import BASIN_FALLBACK_COLOR
 
-        expr = self._color_expr([])
+        layers = self._layers([])
 
-        assert expr == BASIN_FALLBACK_COLOR
+        assert [layer["paint"]["fill-color"] for layer in layers if layer["type"] == "fill"] == [
+            BASIN_FALLBACK_COLOR
+        ]
+        assert all("filter" not in layer for layer in layers)
 
-    def test_matches_with_float_hybas_ids(self):
-        # HYBAS_ID can arrive as a JSON double from Earth Engine. Both the match
-        # values and the color lookup must normalize the same way, or str(float)
-        # vs str(int) keys mismatch and the lookup raises KeyError.
+    def test_normalizes_float_hybas_ids(self):
+        # HYBAS_ID can arrive as a JSON double from Earth Engine. Both the
+        # selector values and the color lookup must normalize the same way, or
+        # str(float) vs str(int) keys mismatch and the lookup raises KeyError.
         from apps.basin_rivers.scripts.statistics import basin_color_map
 
         ids = [6120000010.0, 6120000020.0]
-        expr = self._color_expr(ids)
         mapping = basin_color_map([int(b) for b in ids])
 
-        for basin_id in ids:
-            assert expr[expr.index(int(basin_id)) + 1] == mapping[str(int(basin_id))]
+        assert self._color_by_id(ids) == {int(b): mapping[str(int(b))] for b in ids}
 
-    def test_matches_with_a_one_shot_iterator(self):
-        # hybas_ids must be consumed exactly once: consuming it twice leaves the
-        # second pass empty, which silently produces the all-grey fallback below
-        # instead of raising.
+    def test_consumes_a_one_shot_iterator_exactly_once(self):
+        # Consuming hybas_ids twice leaves the second pass empty, which silently
+        # produces the all-grey fallback instead of raising.
+        from apps.basin_rivers.scripts.visualization import BASIN_FALLBACK_COLOR
+
         ids = [1234501, 1234502]
-        expr = self._color_expr(iter(ids))
+        selected = self._color_by_id(iter(ids))
 
-        assert expr[0] == "match"
-        assert expr != ["match", ["get", "HYBAS_ID"], "#CCCCCC"]
-        assert len(expr) == 2 * len(ids) + 3
-        for basin_id in ids:
-            assert basin_id in expr
+        assert set(selected) == set(ids)
+        assert BASIN_FALLBACK_COLOR not in selected.values()
 
-    def test_line_layer_shares_the_fill_color_expression(self):
-        from apps.basin_rivers.scripts.visualization import basin_tile_style
+    def test_line_shares_the_fill_color_and_selector(self):
+        layers = self._layers([1234501, 1234502])
+        fills = [layer for layer in layers if layer["type"] == "fill"]
+        lines = [layer for layer in layers if layer["type"] == "line"]
 
-        style = basin_tile_style([1234501, 1234502])(self.META, self.URL)
-        fill = next(layer for layer in style["layers"] if layer["type"] == "fill")
-        line = next(layer for layer in style["layers"] if layer["type"] == "line")
-
-        assert line["paint"]["line-color"] is fill["paint"]["fill-color"]
+        assert len(fills) == len(lines)
+        for fill, line in zip(fills, lines):
+            assert line["paint"]["line-color"] == fill["paint"]["fill-color"]
+            assert line["filter"] == fill["filter"]
 
     def test_line_and_fill_paint_use_the_shared_constants(self):
         from apps.basin_rivers.scripts.visualization import (
             BASIN_FILL_OPACITY,
             BASIN_LINE_OPACITY,
             BASIN_LINE_WIDTH,
-            basin_tile_style,
         )
 
-        style = basin_tile_style([1234501])(self.META, self.URL)
-        fill = next(layer for layer in style["layers"] if layer["type"] == "fill")
-        line = next(layer for layer in style["layers"] if layer["type"] == "line")
+        layers = self._layers([1234501])
+        fill = next(layer for layer in layers if layer["type"] == "fill")
+        line = next(layer for layer in layers if layer["type"] == "line")
 
         assert fill["paint"]["fill-opacity"] == BASIN_FILL_OPACITY
         assert line["paint"]["line-width"] == BASIN_LINE_WIDTH
         assert line["paint"]["line-opacity"] == BASIN_LINE_OPACITY
 
     def test_emits_no_circle_layer(self):
-        from apps.basin_rivers.scripts.visualization import basin_tile_style
-
-        style = basin_tile_style([1234501])(self.META, self.URL)
-
-        assert all(layer["type"] != "circle" for layer in style["layers"])
+        assert all(layer["type"] != "circle" for layer in self._layers([1234501]))
