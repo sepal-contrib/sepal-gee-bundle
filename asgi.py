@@ -25,12 +25,15 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, Response
 from starlette.routing import Mount, Route
 
-from apps._commons.tiles import resolve_in_session
+from apps._commons.tiles import TILE_ROOT, resolve_in_session
 
 logger = setup_logging(logger_name="sepal_gee_bundle.tiles")
 
 #: Archives are the only thing the route is willing to serve.
 TILE_SUFFIX = ".pmtiles"
+
+#: Kept next to the route it registers, so the startup log cannot drift from it.
+TILE_ROUTE = "/tiles/{kernel_id}/pmtiles"
 
 
 def _refuse(status: int, kernel_id: str, reason: str) -> Response:
@@ -136,9 +139,18 @@ async def tile_archive(request: Request) -> Response:
 # the state worker are all lost.
 app = Starlette(
     routes=[
-        Route("/tiles/{kernel_id}/pmtiles", endpoint=tile_archive),
+        Route(TILE_ROUTE, endpoint=tile_archive),
         Mount("/", routes=solara_starlette.routes),
     ],
     lifespan=solara_starlette.lifespan,
     middleware=solara_starlette.middleware,
+)
+
+# Emitted once, at import. Its *absence* is the diagnostic: `solara run` never
+# loads this module, so a log without this line is one where /tiles does not
+# exist and every archive request 404s.
+logger.info(
+    "asgi.py loaded — %s serves archives from %s, solara mounted at /",
+    TILE_ROUTE,
+    TILE_ROOT,
 )

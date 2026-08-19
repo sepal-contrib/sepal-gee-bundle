@@ -315,3 +315,14 @@ class TestTileArchiveLogging:
             client.get("/tiles/kernel-a/pmtiles")
 
         assert "no filePath" in caplog.text
+
+
+def test_the_startup_line_names_the_route_that_is_registered():
+    """Its absence is the diagnostic, so it must not drift from the real route."""
+    import asgi
+
+    registered = [
+        route.path for route in asgi.app.routes if getattr(route, "path", None) == asgi.TILE_ROUTE
+    ]
+
+    assert registered == [asgi.TILE_ROUTE]
