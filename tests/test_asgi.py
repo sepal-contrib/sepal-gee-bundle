@@ -168,6 +168,29 @@ class TestTileArchiveServing:
 
         assert response.headers["accept-ranges"] == "bytes"
 
+    def test_a_range_is_not_gzipped(self, client, tile_root):
+        """Solara's gzip middleware wraps this route and ignores the status.
+
+        Compressing a 206 leaves Content-Length describing the compressed body
+        beside a Content-Range describing the uncompressed slice, and re-packs
+        tile data on every one of the many ranges PMTiles asks for. The existing
+        range test cannot catch it: its payload is under the middleware's
+        minimum_size, so compression never fires.
+        """
+        _archive(tile_root, "kernel-a", payload=b"pmtiles" * 500)
+        _register("kernel-a", "session-a")
+        client.cookies.set("solara-session-id", "session-a")
+
+        response = client.get(
+            _url(tile_root, "kernel-a"),
+            headers={"Range": "bytes=0-1999", "Accept-Encoding": "gzip, deflate, br"},
+        )
+
+        assert response.status_code == 206
+        assert response.headers.get("content-encoding") == "identity"
+        assert response.headers["content-length"] == "2000"
+        assert response.headers["content-range"] == "bytes 0-1999/3500"
+
     def test_missing_file_is_not_found(self, client, tile_root):
         (tile_root / "kernel-a").mkdir()
         _register("kernel-a", "session-a")

@@ -129,7 +129,11 @@ async def tile_archive(request: Request) -> Response:
         request.headers.get("range", "whole file"),
     )
 
-    return FileResponse(path)
+    # Solara's middleware gzips by content type and size without looking at the
+    # status, so a 206 comes back with Content-Length for the compressed body
+    # next to a Content-Range for the uncompressed slice. Declaring an encoding
+    # is what makes the middleware pass the response through.
+    return FileResponse(path, headers={"content-encoding": "identity"})
 
 
 # Solara's own routes end in catch-alls that swallow anything mounted after
