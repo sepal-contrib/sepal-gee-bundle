@@ -18,6 +18,7 @@ Run it with::
 """
 
 import solara.server.starlette as solara_starlette
+from pysepal.logger import setup_logging
 from solara.server import kernel_context, server
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -26,8 +27,22 @@ from starlette.routing import Mount, Route
 
 from apps._commons.tiles import resolve_in_session
 
+logger = setup_logging(logger_name="sepal_gee_bundle.tiles")
+
 #: Archives are the only thing the route is willing to serve.
 TILE_SUFFIX = ".pmtiles"
+
+
+def _refuse(status: int, kernel_id: str, reason: str) -> Response:
+    """Log why a tile request was turned away, then turn it away.
+
+    The access log only ever shows the status, and every failure here is a 404
+    or 403 for one of several unrelated reasons -- an unknown kernel and a
+    filename that escaped its directory are indistinguishable from outside.
+    """
+    logger.warning("tile refused (%s) kernel=%s: %s", status, kernel_id, reason)
+
+    return Response(status_code=status)
 
 
 def _authorize(request: Request, kernel_id: str) -> Response | None:
@@ -46,11 +61,18 @@ def _authorize(request: Request, kernel_id: str) -> Response | None:
     """
     context = kernel_context.contexts.get(kernel_id, None)
     if context is None:
-        return Response(status_code=404)
+        return _refuse(
+            404,
+            kernel_id,
+            "no such kernel — it was culled, or the page was served by `solara run` "
+            "rather than asgi.py and the layer built a URL nothing here answers",
+        )
 
     session_id = request.cookies.get(server.COOKIE_KEY_SESSION_ID)
-    if not session_id or session_id != context.session_id:
-        return Response(status_code=403)
+    if not session_id:
+        return _refuse(403, kernel_id, f"no {server.COOKIE_KEY_SESSION_ID} cookie on the request")
+    if session_id != context.session_id:
+        return _refuse(403, kernel_id, "session cookie belongs to a different session")
 
     return None
 
@@ -80,18 +102,29 @@ async def tile_archive(request: Request) -> Response:
 
     file_path = request.query_params.get("filePath")
     if not file_path:
-        return Response(status_code=400)
+        return _refuse(400, kernel_id, "no filePath query parameter")
 
     if not file_path.endswith(TILE_SUFFIX):
-        return Response(status_code=404)
+        return _refuse(404, kernel_id, f"only {TILE_SUFFIX} is served, asked for {file_path!r}")
 
     try:
         path = resolve_in_session(kernel_id, file_path)
-    except ValueError:
-        return Response(status_code=404)
+    except ValueError as error:
+        return _refuse(404, kernel_id, f"{error}")
 
     if not path.is_file():
-        return Response(status_code=404)
+        return _refuse(404, kernel_id, f"no such archive: {path}")
+
+    # One line per range, matching the access log: PMTiles reads an archive in
+    # many small ranges, and seeing them arrive is how you tell the browser
+    # actually reached this route rather than failing somewhere upstream.
+    logger.info(
+        "tile served kernel=%s %s (%d bytes) range=%s",
+        kernel_id,
+        path.name,
+        path.stat().st_size,
+        request.headers.get("range", "whole file"),
+    )
 
     return FileResponse(path)
 

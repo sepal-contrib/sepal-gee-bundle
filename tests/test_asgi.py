@@ -240,3 +240,78 @@ class TestSessionDirectories:
     def test_tile_root_is_not_the_bare_temp_dir(self):
         """A stray rmtree of TILE_ROOT must not take /tmp with it."""
         assert TILE_ROOT.name == "sepal_gee_bundle_tiles"
+
+
+class TestTileArchiveLogging:
+    """A refusal that says only "404" is what made this route hard to debug."""
+
+    def test_serving_is_logged_with_the_archive_and_range(self, client, tile_root, caplog):
+        _archive(tile_root, "kernel-a", payload=b"0123456789")
+        _register("kernel-a", "session-a")
+        client.cookies.set("solara-session-id", "session-a")
+
+        with caplog.at_level("INFO", logger="sepal_gee_bundle.tiles"):
+            client.get(_url(tile_root, "kernel-a"), headers={"Range": "bytes=2-5"})
+
+        assert "tile served" in caplog.text
+        assert "basins.pmtiles" in caplog.text
+        assert "10 bytes" in caplog.text
+        assert "bytes=2-5" in caplog.text
+
+    def test_an_unknown_kernel_says_so(self, client, tile_root, caplog):
+        _archive(tile_root, "kernel-a")
+        client.cookies.set("solara-session-id", "session-a")
+
+        with caplog.at_level("WARNING", logger="sepal_gee_bundle.tiles"):
+            client.get(_url(tile_root, "kernel-a"))
+
+        assert "no such kernel" in caplog.text
+        # the mistake that actually happened: served by `solara run`, no route
+        assert "solara run" in caplog.text
+
+    def test_a_missing_cookie_is_distinguished_from_a_wrong_one(self, client, tile_root, caplog):
+        _archive(tile_root, "kernel-a")
+        _register("kernel-a", "session-a")
+
+        with caplog.at_level("WARNING", logger="sepal_gee_bundle.tiles"):
+            client.get(_url(tile_root, "kernel-a"))
+        assert "cookie" in caplog.text
+
+        caplog.clear()
+        client.cookies.set("solara-session-id", "session-b")
+        with caplog.at_level("WARNING", logger="sepal_gee_bundle.tiles"):
+            client.get(_url(tile_root, "kernel-a"))
+        assert "different session" in caplog.text
+
+    def test_a_cross_session_read_names_the_escape(self, client, tile_root, caplog):
+        _archive(tile_root, "kernel-victim")
+        _archive(tile_root, "kernel-attacker")
+        _register("kernel-attacker", "session-attacker")
+        client.cookies.set("solara-session-id", "session-attacker")
+
+        victim = tile_root / "kernel-victim" / "basins.pmtiles"
+        with caplog.at_level("WARNING", logger="sepal_gee_bundle.tiles"):
+            client.get(f"/tiles/kernel-attacker/pmtiles?filePath={victim}")
+
+        assert "escapes the session directory" in caplog.text
+
+    def test_a_missing_archive_names_the_path(self, client, tile_root, caplog):
+        (tile_root / "kernel-a").mkdir()
+        _register("kernel-a", "session-a")
+        client.cookies.set("solara-session-id", "session-a")
+
+        with caplog.at_level("WARNING", logger="sepal_gee_bundle.tiles"):
+            client.get(_url(tile_root, "kernel-a", "absent.pmtiles"))
+
+        assert "no such archive" in caplog.text
+        assert "absent.pmtiles" in caplog.text
+
+    def test_a_missing_file_path_says_so(self, client, tile_root, caplog):
+        _archive(tile_root, "kernel-a")
+        _register("kernel-a", "session-a")
+        client.cookies.set("solara-session-id", "session-a")
+
+        with caplog.at_level("WARNING", logger="sepal_gee_bundle.tiles"):
+            client.get("/tiles/kernel-a/pmtiles")
+
+        assert "no filePath" in caplog.text
