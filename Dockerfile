@@ -27,8 +27,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 USER $MAMBA_USER
 COPY --chown=$MAMBA_USER:$MAMBA_USER . /usr/local/lib/sepal-gee-bundle
-RUN micromamba create -n sepal-gee-bundle python=3.12 pip tippecanoe -c conda-forge -y && \
-    micromamba run -n sepal-gee-bundle pip install -e . --no-cache-dir && \
+# sepal_environment.yml is the only place the environment is described -- it
+# names the env, so `micromamba run -n sepal-gee-bundle` elsewhere is bound to
+# it, and its pip section installs this project.
+RUN micromamba create -y -f sepal_environment.yml && \
     micromamba clean --all --yes && \
     rm -rf ~/.cache/pip
 
