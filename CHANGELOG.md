@@ -1,3 +1,44 @@
+## 0.3.0 (2026-08-20)
+
+### Feat
+
+- **basin_rivers**: render upstream basins as vector tiles
+- **basin_rivers**: build basin tiles from batched Earth Engine fetches
+- **basin_rivers**: add a tile style matching the dashboard colors
+- log at startup that asgi.py mounted the tile route
+- log why a tile request was served or refused
+- serve per-session tile archives over an authorized route
+- **aoi**: restrict AOI selection to GEE methods and drawing
+- **tmf**: add TransitionMap layer; collapsible, width-capped legends
+- **tmf**: render CHG as a start->end transition class map
+- **maps**: add satellite basemap as a switchable secondary basemap
+- **tmf,fcdm**: attach vis_params to exported assets
+
+### Fix
+
+- **basin_rivers**: select basin colors with filters, not a paint expression
+- stop solara's gzip middleware compressing tile range responses
+- run the dev script through asgi.py so the tile route exists
+- **ci**: handle a service-account EARTHENGINE_TOKEN in dataset-check
+- **ci**: write EARTHENGINE_TOKEN to credentials, not service-account.json
+- scope markdown image style to .markdown-new-tab so it doesn't leak to all images
+- clip AOI by geometry so Image.clip updates system:footprint
+- **gee-source**: don't render the iframe when extraction yields no source
+
+### Refactor
+
+- **basin_rivers**: serve basin tiles through the authorized route
+- **basin_rivers**: share the basin color assignment
+- **gee_source**: save through the pysepal_api files API
+- **coverage_analysis**: rename VizRequest to VisualizeRequest
+- **alos_mosaics**: rename VizStep component to VisualizeStep
+- **tmf**: drop duplicate by-year chart, tidy dashboard legend
+
+### Perf
+
+- **docker**: poll healthcheck every 30s instead of 1s
+- **memory**: run under jemalloc to bound RSS
+
 ## 0.2.0 (2026-05-19)
 
 ### Feat
