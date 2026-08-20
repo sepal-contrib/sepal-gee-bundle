@@ -17,6 +17,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 ENVIRONMENT_FILE = REPO_ROOT / "sepal_environment.yml"
 DOCKERFILE = REPO_ROOT / "Dockerfile"
 SUPERVISORD_CONF = REPO_ROOT / "supervisord.conf"
+COMPOSE_FILE = REPO_ROOT / "docker-compose.yml"
+
+CONTAINER_HOME = "/home/mambauser"
+CREDENTIALS_PATH = f"{CONTAINER_HOME}/.config/earthengine/credentials"
 
 MICROMAMBA_RUN = re.compile(r"micromamba run -n (\S+)")
 MICROMAMBA_CREATE = re.compile(r"micromamba create[^\\\n]*")
@@ -91,3 +95,28 @@ class TestBinaryDependencies:
         basins unrenderable in the container.
         """
         assert "tippecanoe" in conda_dependencies
+
+
+@pytest.fixture(scope="module")
+def compose_service():
+    compose = yaml.safe_load(COMPOSE_FILE.read_text())
+    return compose["services"]["sepal-gee-bundle"]
+
+
+class TestEarthEngineCredentials:
+    """Graph building needs the global ee, and init_ee() skips it without these."""
+
+    def test_compose_mounts_earth_engine_credentials(self, compose_service):
+        volumes = compose_service.get("volumes", [])
+
+        assert any("/.config/earthengine/credentials" in str(v) for v in volumes)
+
+    def test_the_mount_lands_in_the_home_init_ee_reads(self, compose_service):
+        volumes = compose_service.get("volumes", [])
+
+        assert any(CREDENTIALS_PATH in str(v) for v in volumes)
+
+    def test_the_container_still_runs_as_the_user_that_home_belongs_to(self):
+        users = re.findall(r"^USER (\S+)", DOCKERFILE.read_text(), re.MULTILINE)
+
+        assert users[-1] == "$MAMBA_USER"

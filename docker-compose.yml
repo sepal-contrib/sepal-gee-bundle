@@ -7,6 +7,9 @@ services:
         HOST_GID: "${HOST_GID:-1000}"
     image: "sepal-gee-bundle"
     container_name: sepal-gee-bundle
+    volumes:
+      # init_ee() no-ops silently without this, and graph building needs the global ee.
+      - "${EE_CREDENTIALS_PATH:-${HOME}/.config/earthengine/credentials}:/home/mambauser/.config/earthengine/credentials:ro"
     environment:
       SEPAL_HOST: "${SEPAL_HOST:-}"
       FORWARDED_ALLOW_IPS: "*"
