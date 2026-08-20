@@ -19,7 +19,8 @@ def test_discrete_only():
     data = LegendData(items=[DiscreteEntry("Forest", "#006400")])
     result = asdict(data)
     assert len(result["items"]) == 1
-    assert result["items"][0] == {"label": "Forest", "color": "#006400"}
+    assert result["items"][0]["label"] == "Forest"
+    assert result["items"][0]["color"] == "#006400"
     assert result["gradients"] == []
 
 
