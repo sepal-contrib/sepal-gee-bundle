@@ -1,3 +1,9 @@
+## 0.3.1 (2026-08-20)
+
+### Fix
+
+- mount Earth Engine credentials so init_ee can initialize
+
 ## 0.3.0 (2026-08-20)
 
 ### Feat
