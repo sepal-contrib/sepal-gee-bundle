@@ -8,7 +8,9 @@ version = "0.2.0"
 description = "Bundle of lightweight GEE-based SEPAL applications: FCDM, Basin Rivers, GFC, Coverage Analysis"
 requires-python = ">=3.12"
 dependencies = [
-    "pysepal>=4.0,<5",
+    # rc0 belongs in the floor: PEP 440 sorts 4.0.0rc0 below 4.0.0, so ">=4.0"
+    # cannot select the rc, and --pre does not change that. Drop it once 4.0.0 ships.
+    "pysepal>=4.0.0rc0,<5",
     # pysepal 4.0 asserts solara.scope.get_kernel_id and solara._using_solara_server
     # at import; both are private, so solara stays pinned.
     "solara>=1.60,<2",
