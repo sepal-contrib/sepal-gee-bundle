@@ -48,6 +48,14 @@ MAX_CATCH_DISPLAY = 10
 # If upstream delineation returns more than this, suggest a higher HydroSHEDS level
 BASIN_WARN_THRESHOLD = 50
 
+# Basins are fetched in batches: one getInfo over a large watershed exceeds
+# Earth Engine's response limit.
+BASIN_FETCH_BATCH_SIZE = 200
+# Batches in flight at once. get_info_batch_async gathers everything it is
+# given, so the window — not the batch size — is what bounds peak memory and
+# concurrent requests to Earth Engine.
+BASIN_FETCH_WINDOW = 4
+
 # --- Dashboard palette: blue / teal / cyan family (watersheds = water) ---
 CATCH_COLOR_PALETTE = [
     "#0d47a1",  # deep blue
@@ -101,6 +109,8 @@ CATCH_BAR_TITLES = {
 }
 
 __all__ = [
+    "BASIN_FETCH_BATCH_SIZE",
+    "BASIN_FETCH_WINDOW",
     "BASIN_WARN_THRESHOLD",
     "CATCH_BAR_TITLES",
     "CATCH_COLOR_PALETTE",

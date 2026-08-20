@@ -40,4 +40,7 @@ if [[ -f .env ]]; then
   done < .env
 fi
 
-solara run "$SOLARA_FILE" --port "$PORT" --no-open
+# uvicorn rather than `solara run`: the tile route lives in asgi.py and has to
+# be registered ahead of solara's catch-alls, which the CLI gives no way to do.
+# Under `solara run` every /tiles request 404s and basins never draw.
+SOLARA_APP="$SOLARA_FILE" exec python -m uvicorn asgi:app --host 127.0.0.1 --port "$PORT"

@@ -27,8 +27,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 USER $MAMBA_USER
 COPY --chown=$MAMBA_USER:$MAMBA_USER . /usr/local/lib/sepal-gee-bundle
-RUN micromamba create -n sepal-gee-bundle python=3.12 pip -c conda-forge -y && \
-    micromamba run -n sepal-gee-bundle pip install -e . --no-cache-dir && \
+# sepal_environment.yml is the only place the environment is described -- it
+# names the env, so `micromamba run -n sepal-gee-bundle` elsewhere is bound to
+# it, and its pip section installs this project.
+RUN micromamba create -y -f sepal_environment.yml && \
     micromamba clean --all --yes && \
     rm -rf ~/.cache/pip
 
@@ -43,6 +45,12 @@ RUN micromamba create -n sepal-gee-bundle python=3.12 pip -c conda-forge -y && \
 ENV LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2 \
     PYTHONMALLOC=malloc \
     MALLOC_CONF=background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:1000
+
+# asgi.py serves the archives, so the comm bridge must never also stand up: it
+# gives every page an unauthenticated fetch to any 127.0.0.1 port, and this
+# container is shared by many SEPAL users. Set ahead of the vectortileserver
+# dependency itself -- inert until then, and easy to miss afterwards.
+ENV VECTORTILESERVER_DISABLE_JUPYTER_LOOPBACK=1
 
 EXPOSE 8768
 

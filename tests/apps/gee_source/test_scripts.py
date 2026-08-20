@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import PurePosixPath
 from types import SimpleNamespace
+from typing import NamedTuple
 from unittest.mock import patch
 
 import pytest
@@ -200,36 +202,47 @@ class TestSanitizeFilename:
 # save_code                                                                    #
 # --------------------------------------------------------------------------- #
 
+RESULTS_DIR = "/home/sepal-user/module_results/sepal_gee_bundle.gee_source"
+
+
+class FakeEntry(NamedTuple):
+    """Stands in for pysepal_api's FileEntry; save_code only reads ``name``."""
+
+    name: str
+    path: str
+
+
+class FakeUserFiles:
+    """In-memory stand-in for ``SepalClient.files``."""
+
+    def __init__(self):
+        self.stored = {}
+
+    def list(self, folder=".", *, extensions=None, include_hidden=False):
+        prefix = f"{str(folder).rstrip('/')}/"
+        return [
+            FakeEntry(name=path.rsplit("/", 1)[-1], path=path)
+            for path in sorted(self.stored)
+            if path.startswith(prefix)
+        ]
+
+    def write(self, file_path, content, *, overwrite=False):
+        if file_path in self.stored and not overwrite:
+            raise AssertionError("save_code should preflight existing files")
+        self.stored[file_path] = content.encode("utf-8") if isinstance(content, str) else content
+        return {}
+
+
 class FakeSepalClient:
     """Small in-memory fake for SepalClient user-files calls."""
 
-    results_path = "module_results/sepal_gee_bundle.gee_source"
-
     def __init__(self):
-        self.created_dirs = []
-        self.files = {}
+        self.files = FakeUserFiles()
+        self.results_dirs_created = 0
 
-    def get_remote_dir(self, folder, parents=False):
-        remote_folder = str(folder).strip("/")
-        self.created_dirs.append((remote_folder, parents))
-        return remote_folder
-
-    def list_files(self, folder="/", extensions=None):
-        prefix = f"{str(folder).rstrip('/')}/"
-        return {
-            "files": [
-                {"name": path.rsplit("/", 1)[-1], "path": path}
-                for path in sorted(self.files)
-                if path.startswith(prefix)
-            ]
-        }
-
-    def set_file(self, file_path, content, overwrite=False):
-        if file_path in self.files and not overwrite:
-            raise AssertionError("save_code should preflight existing files")
-        payload = content.encode("utf-8") if isinstance(content, str) else content
-        self.files[file_path] = payload
-        return {}
+    def ensure_results_dir(self):
+        self.results_dirs_created += 1
+        return PurePosixPath(RESULTS_DIR)
 
 
 class TestSaveCode:
@@ -238,11 +251,9 @@ class TestSaveCode:
 
         path = save_code("console.log('hi');", "demo", sepal_client=sepal_client)
 
-        assert path == "module_results/sepal_gee_bundle.gee_source/demo.js"
-        assert sepal_client.files[path] == b"console.log('hi');"
-        assert sepal_client.created_dirs == [
-            ("module_results/sepal_gee_bundle.gee_source", True)
-        ]
+        assert path == f"{RESULTS_DIR}/demo.js"
+        assert sepal_client.files.stored[path] == b"console.log('hi');"
+        assert sepal_client.results_dirs_created == 1
 
     def test_sanitizes_filename_before_writing(self):
         sepal_client = FakeSepalClient()

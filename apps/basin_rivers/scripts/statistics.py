@@ -1,5 +1,7 @@
 """Zonal statistics per catchment using reduceRegions."""
 
+from typing import Iterable
+
 import ee
 import pandas as pd
 
@@ -63,6 +65,24 @@ def parse_zonal_stats(raw_result: dict) -> pd.DataFrame:
     return df
 
 
+def basin_color_map(basin_ids: Iterable) -> dict:
+    """Map each basin id to a color, keyed on sorted id so it is stable.
+
+    The map layer and the dashboard charts both symbolize by basin and must
+    agree, so the assignment lives here and is shared rather than repeated.
+
+    Args:
+        basin_ids: basin identifiers, in any order, duplicates allowed.
+
+    Returns:
+        ``{str(basin_id): hex_color}``.
+    """
+    ids = sorted({str(b) for b in basin_ids})
+    palette = CATCH_COLOR_PALETTE
+
+    return {b: palette[i % len(palette)] for i, b in enumerate(ids)}
+
+
 def add_catchment_colors(df: pd.DataFrame) -> pd.DataFrame:
     """Add a deterministic `catch_color` column keyed on sorted basin id.
 
@@ -72,11 +92,10 @@ def add_catchment_colors(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "basin" not in df.columns:
         return df.assign(catch_color=pd.Series(dtype=str))
 
-    basins_sorted = sorted(df["basin"].astype(str).unique())
-    palette = CATCH_COLOR_PALETTE
-    mapping = {b: palette[i % len(palette)] for i, b in enumerate(basins_sorted)}
+    mapping = basin_color_map(df["basin"])
     out = df.copy()
     out["catch_color"] = out["basin"].astype(str).map(mapping)
+
     return out
 
 

@@ -1,12 +1,14 @@
+# Builds both the local dev environment and the one inside the image, so a
+# change here changes what gets deployed.
 name: sepal-gee-bundle
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - python=3.12
   - pip
   - rasterio
   - gdal
   - pyproj
+  - tippecanoe
   - pip:
       - -e .
