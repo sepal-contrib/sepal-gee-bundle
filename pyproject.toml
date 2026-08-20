@@ -29,6 +29,7 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "pytest-mock",
+    "pyyaml",
     "ruff",
     "pypdf>=4",
 ]
