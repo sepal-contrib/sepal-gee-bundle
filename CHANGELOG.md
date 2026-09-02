@@ -1,3 +1,10 @@
+## 0.3.2 (2026-09-02)
+
+### Fix
+
+- require pysepal 3.8.3
+- move to pysepal 3.8.2 while 4.0 is a release candidate
+
 ## 0.3.1 (2026-08-20)
 
 ### Fix
