@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sepal-gee-bundle"
-version = "0.3.2"
+version = "0.3.3"
 description = "Bundle of lightweight GEE-based SEPAL applications: FCDM, Basin Rivers, GFC, Coverage Analysis"
 requires-python = ">=3.12"
 dependencies = [
@@ -42,7 +42,7 @@ dev = [
 include = ["apps*", "pdf_report*"]
 
 [tool.commitizen]
-version = "0.3.2"
+version = "0.3.3"
 update_changelog_on_bump = true
 changelog_file = "CHANGELOG.md"
 changelog_incremental = true
