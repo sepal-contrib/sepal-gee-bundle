@@ -1,3 +1,9 @@
+## 0.3.4 (2026-10-20)
+
+### Fix
+
+- require ee-client 3.3.1 to accept fractional Earth Engine export progress
+
 ## 0.3.3 (2026-09-03)
 
 ### Fix
