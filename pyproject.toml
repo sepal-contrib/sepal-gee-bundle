@@ -8,8 +8,7 @@ version = "0.3.4"
 description = "Bundle of lightweight GEE-based SEPAL applications: FCDM, Basin Rivers, GFC, Coverage Analysis"
 requires-python = ">=3.12"
 dependencies = [
-    # Held on the 3.8 line while 4.0 is still a release candidate.
-    "pysepal>=3.8.3,<4",
+    "pysepal>=4.1.0,<5",
     # pysepal asserts solara.scope.get_kernel_id and solara._using_solara_server
     # at import; both are private, so solara stays pinned.
     "solara>=1.60,<2",
