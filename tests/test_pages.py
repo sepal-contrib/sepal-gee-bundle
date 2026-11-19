@@ -58,5 +58,8 @@ async def test_page_renders_the_map_app(session, app, page_name):
         errors = [w for w in tree if isinstance(w, v.Alert) and w.type == "error"]
         assert not errors
         assert any("sepal-mapapp" in (getattr(w, "class_", None) or "").split() for w in tree)
+        # By name: pysepal 5 removes the legacy module.
+        legacy = "pysepal.sepalwidgets.vue_app.MapApp"
+        assert not any(f"{type(w).__module__}.{type(w).__name__}" == legacy for w in tree)
     finally:
         rc.close()
