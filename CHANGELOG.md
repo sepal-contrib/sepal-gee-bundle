@@ -1,3 +1,14 @@
+## 0.4.0 (2026-11-19)
+
+### Feat
+
+- move the apps to the native Solara MapApp
+
+### Fix
+
+- drop the chart resize nudge, require ipecharts 1.4.2
+- **gee_source**: keep the narrow-window bottom band for the iframe
+
 ## 0.3.6 (2026-11-16)
 
 ### Fix
