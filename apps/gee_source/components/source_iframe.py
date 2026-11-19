@@ -38,10 +38,10 @@ class SourceIframe(v.VuetifyTemplate):
   <div
     :style="{
       position: 'fixed',
-      top: '0',
-      bottom: '0',
-      left: 'var(--drawer-width, 0px)',
-      right: 'calc(var(--right-panel-open, 0) * var(--right-panel-width, 0px))',
+      top: 'var(--sepal-top-reserved, 0px)',
+      bottom: 'var(--sepal-bottom-reserved, 0px)',
+      left: 'var(--sepal-drawer-width, 0px)',
+      right: 'var(--sepal-right-panel-width, 0px)',
       background: '#000',
       transition: 'left 0.3s ease, right 0.3s ease',
       zIndex: 0,

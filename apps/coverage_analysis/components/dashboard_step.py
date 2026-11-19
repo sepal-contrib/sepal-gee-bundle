@@ -29,10 +29,12 @@ logger = logging.getLogger("sepal_gee_bundle.coverage_analysis")
 
 
 class _DialogResizer(ipv.VuetifyTemplate):
-    """Dispatch a window resize event whenever `tick` changes.
+    """Dispatch a window resize event when it mounts and whenever `tick` changes.
 
     ECharts measures zero width when mounted inside a just-opened dialog.
-    Bumping `tick` after dialog open forces the widget to re-layout.
+    Bumping `tick` after dialog open forces the widget to re-layout. The dialog
+    mounts its content on the first open, after `tick` was bumped, so the mount
+    nudges too.
     """
 
     tick = Int(0).tag(sync=True)
@@ -40,13 +42,21 @@ class _DialogResizer(ipv.VuetifyTemplate):
         """
         <script class='dashboard-resize'>
         {
-            watch: {
-                tick() {
+            methods: {
+                nudge() {
                     this.$nextTick(() => {
                         setTimeout(() => {
                             window.dispatchEvent(new Event("resize"));
                         }, 120);
                     });
+                }
+            },
+            mounted() {
+                this.nudge();
+            },
+            watch: {
+                tick() {
+                    this.nudge();
                 }
             }
         }
@@ -203,7 +213,6 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
             on_v_model=open_dialog.set,
             max_width="1400px",
             scrollable=True,
-            eager=True,
         ):
             with rv.Card():
                 with rv.CardTitle(class_="d-flex align-center py-3 px-4"):

@@ -41,12 +41,13 @@ class StatsRequest:
 
 
 class _DialogResizer(ipv.VuetifyTemplate):
-    """Dispatches a window resize event every time `tick` changes.
+    """Dispatches a window resize event when it mounts and every time `tick` changes.
 
     ECharts listens for window `resize` events and recalculates its canvas
     dimensions. When a chart is mounted inside a just-opened dialog it starts
     out measuring the (zero-width) pre-animation size; we need to nudge it
-    after the dialog has settled.
+    after the dialog has settled. The dialog mounts its content on the first
+    open, after `tick` was bumped, so the mount nudges too.
     """
 
     tick = Int(0).tag(sync=True)
@@ -54,13 +55,21 @@ class _DialogResizer(ipv.VuetifyTemplate):
         """
         <script class='dashboard-resize'>
         {
-            watch: {
-                tick() {
+            methods: {
+                nudge() {
                     this.$nextTick(() => {
                         setTimeout(() => {
                             window.dispatchEvent(new Event("resize"));
                         }, 120);
                     });
+                }
+            },
+            mounted() {
+                this.nudge();
+            },
+            watch: {
+                tick() {
+                    this.nudge();
                 }
             }
         }
@@ -183,7 +192,6 @@ def DashboardStep(state, gee_interface, legend_visible=None, legend_data=None, s
         on_v_model=open_dialog.set,
         max_width="1400px",
         scrollable=True,
-        eager=True,
     ):
         with rv.Card():
             with rv.CardTitle(class_="d-flex align-center py-3 px-4"):
