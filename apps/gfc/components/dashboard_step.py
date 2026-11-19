@@ -3,12 +3,10 @@
 from dataclasses import dataclass
 from io import StringIO
 
-import ipyvuetify as ipv
 import reacton.ipyvuetify as rv
 import solara
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
-from traitlets import Int, Unicode
 
 from apps.gfc.scripts import compute_area_stats, parse_area_stats
 
@@ -19,43 +17,6 @@ from .dashboard import LossTrend, OverallPie, SummaryCard
 class StatsRequest:
     result_image: object  # ee.Image
     aoi_fc: object  # ee.FeatureCollection
-
-
-class _DialogResizer(ipv.VuetifyTemplate):
-    """Dispatch a window resize event when it mounts and whenever `tick` changes.
-
-    ECharts measures zero width when mounted inside a just-opened dialog.
-    Bumping `tick` after dialog open forces the widget to re-layout. The dialog
-    mounts its content on the first open, after `tick` was bumped, so the mount
-    nudges too.
-    """
-
-    tick = Int(0).tag(sync=True)
-    template = Unicode(
-        """
-        <script class='dashboard-resize'>
-        {
-            methods: {
-                nudge() {
-                    this.$nextTick(() => {
-                        setTimeout(() => {
-                            window.dispatchEvent(new Event("resize"));
-                        }, 120);
-                    });
-                }
-            },
-            mounted() {
-                this.nudge();
-            },
-            watch: {
-                tick() {
-                    this.nudge();
-                }
-            }
-        }
-        </script>
-        """
-    ).tag(sync=True)
 
 
 def _csv_bytes(rows: list[dict]) -> bytes:
@@ -70,7 +31,6 @@ def _csv_bytes(rows: list[dict]) -> bytes:
 def DashboardStep(state, gee_interface, legend_visible=None, sepal_map=None):
     notifications = use_notifications()
     open_dialog = solara.use_reactive(False)
-    resizer = solara.use_memo(lambda: _DialogResizer(), [])
     compute_cancel = solara.use_ref(None)
 
     @solara.lab.use_task(dependencies=None, raise_error=False, prefer_threaded=False)
@@ -118,7 +78,6 @@ def DashboardStep(state, gee_interface, legend_visible=None, sepal_map=None):
 
     def _on_open_change():
         if open_dialog.value:
-            resizer.tick = resizer.tick + 1
             if legend_visible is not None:
                 legend_visible.set(False)
         elif legend_visible is not None and has_data:
@@ -163,7 +122,6 @@ def DashboardStep(state, gee_interface, legend_visible=None, sepal_map=None):
             rv.Divider()
 
             with rv.CardText(class_="pa-4"):
-                rv.Html(tag="div", children=[resizer], style_="display:none;")
                 _DashboardContent(state)
 
 
