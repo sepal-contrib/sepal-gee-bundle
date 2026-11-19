@@ -57,10 +57,14 @@ jobs:
       - name: Open or update tracking issue (stale)
         if: steps.check.outputs.exit_code != '0'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        # Through env, not interpolated into the script: the report's backticks
+        # ended the JS template literal.
+        env:
+          REPORT: ${{ steps.check.outputs.report }}
         with:
           script: |
             const title = "[dataset-check] staleness report";
-            const body = `${{ steps.check.outputs.report }}`;
+            const body = process.env.REPORT;
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
