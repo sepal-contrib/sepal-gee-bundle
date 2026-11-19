@@ -10,7 +10,6 @@ import logging
 import solara
 from pysepal.logger import setup_logging
 from pysepal.mapping import SepalMap
-from pysepal.sepalwidgets.vue_app import MapApp
 from pysepal.solara import (
     get_current_gee_interface,
     get_current_theme_state,
@@ -18,6 +17,7 @@ from pysepal.solara import (
     with_sepal_sessions,
 )
 from pysepal.solara.components.legend import LegendComponent
+from pysepal.solara.components.map_app import MapApp
 from pysepal.solara.notifications import NotificationProvider
 
 from apps._widgets import AboutOnceDialog, MarkdownNewTab, add_satellite_basemap
@@ -129,7 +129,7 @@ def AlosMosaicsPage():
         },
     ]
 
-    MapApp.element(
+    MapApp(
         app_title="ALOS mosaics",
         repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
         docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/alos_mosaics",

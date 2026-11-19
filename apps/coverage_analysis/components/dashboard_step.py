@@ -11,7 +11,6 @@ import logging
 from dataclasses import dataclass
 from io import StringIO
 
-import ipyvuetify as ipv
 import pandas as pd
 import reacton.ipyvuetify as rv
 import solara
@@ -19,40 +18,12 @@ from pysepal.solara import get_current_gee_interface
 from pysepal.solara.components.task_button import TaskButtonComponent, use_task_button
 from pysepal.solara.notifications import use_notifications
 from reacton import ipyvue
-from traitlets import Int, Unicode
 
 from apps.coverage_analysis.scripts import compute_dashboard_stats
 
 from .dashboard import SensorBar, SummaryCard, YearBar
 
 logger = logging.getLogger("sepal_gee_bundle.coverage_analysis")
-
-
-class _DialogResizer(ipv.VuetifyTemplate):
-    """Dispatch a window resize event whenever `tick` changes.
-
-    ECharts measures zero width when mounted inside a just-opened dialog.
-    Bumping `tick` after dialog open forces the widget to re-layout.
-    """
-
-    tick = Int(0).tag(sync=True)
-    template = Unicode(
-        """
-        <script class='dashboard-resize'>
-        {
-            watch: {
-                tick() {
-                    this.$nextTick(() => {
-                        setTimeout(() => {
-                            window.dispatchEvent(new Event("resize"));
-                        }, 120);
-                    });
-                }
-            }
-        }
-        </script>
-        """
-    ).tag(sync=True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,7 +58,6 @@ def _csv_bytes(stats: dict | None) -> bytes:
 def DashboardStep(state, legend_visible=None, sepal_map=None):
     notifications = use_notifications()
     open_dialog = solara.use_reactive(False)
-    resizer = solara.use_memo(lambda: _DialogResizer(), [])
     compute_cancel = solara.use_ref(None)
 
     stats = state.dashboard_stats.value
@@ -162,7 +132,6 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
     # --- Dialog open/close + legend hide/restore ---
     def _on_open_change():
         if open_dialog.value:
-            resizer.tick = resizer.tick + 1
             if legend_visible is not None:
                 legend_visible.set(False)
         elif legend_visible is not None and has_data:
@@ -203,7 +172,6 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
             on_v_model=open_dialog.set,
             max_width="1400px",
             scrollable=True,
-            eager=True,
         ):
             with rv.Card():
                 with rv.CardTitle(class_="d-flex align-center py-3 px-4"):
@@ -223,7 +191,6 @@ def DashboardStep(state, legend_visible=None, sepal_map=None):
                 rv.Divider()
 
                 with rv.CardText(class_="pa-4"):
-                    rv.Html(tag="div", children=[resizer], style_="display:none;")
                     _DashboardContent(state)
 
 

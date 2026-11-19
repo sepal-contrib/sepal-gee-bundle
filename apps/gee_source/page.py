@@ -4,12 +4,12 @@ import logging
 
 import solara
 from pysepal.logger import setup_logging
-from pysepal.sepalwidgets.vue_app import MapApp
 from pysepal.solara import (
     get_current_theme_state,
     setup_theme_colors,
     with_sepal_sessions,
 )
+from pysepal.solara.components.map_app import MapApp
 from pysepal.solara.notifications import NotificationProvider
 
 from apps._widgets import MarkdownNewTab
@@ -112,7 +112,7 @@ def GeeSourcePage():
         },
     ]
 
-    MapApp.element(
+    MapApp(
         app_title="GEE Source",
         repo_url="https://github.com/sepal-contrib/sepal-gee-bundle",
         docs_url="https://github.com/sepal-contrib/sepal-gee-bundle/tree/main/apps/gee_source",

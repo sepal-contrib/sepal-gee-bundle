@@ -35,18 +35,7 @@ class SourceIframe(v.VuetifyTemplate):
     template = traitlets.Unicode(
         """
 <template>
-  <div
-    :style="{
-      position: 'fixed',
-      top: '0',
-      bottom: '0',
-      left: 'var(--drawer-width, 0px)',
-      right: 'calc(var(--right-panel-open, 0) * var(--right-panel-width, 0px))',
-      background: '#000',
-      transition: 'left 0.3s ease, right 0.3s ease',
-      zIndex: 0,
-    }"
-  >
+  <div class="gee-source-frame">
     <iframe
       v-if="mode === 'app' && app_url"
       :src="app_url"
@@ -68,6 +57,23 @@ class SourceIframe(v.VuetifyTemplate):
     ></iframe>
   </div>
 </template>
+<style>
+.gee-source-frame {
+  position: fixed;
+  top: var(--sepal-top-reserved, 0px);
+  bottom: 0;
+  left: var(--sepal-drawer-width, 0px);
+  right: var(--sepal-right-panel-width, 0px);
+  background: #000;
+  transition: left 0.3s ease, right 0.3s ease;
+  z-index: 0;
+}
+/* Same band as pysepal's map in a narrow window: the docked panel's space stays
+   reserved, so the frame does not resize when the panel opens or closes. */
+.sepal-mapapp--narrow .gee-source-frame {
+  bottom: 45vh;
+}
+</style>
 """
     ).tag(sync=True)
 
